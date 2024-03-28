@@ -5,52 +5,56 @@
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable:4996)
 #include "cgltf/cgltf.h"
+#include <gmtl/gmtl.h>
 
-/*
-char* LoadFileData(const char* fileName, size_t* dataSize)
+char* LoadFileDataCPP(const char* fileName, size_t* dataSize)
 {
     char* data = nullptr;
     *dataSize = 0;
 
-    if (fileName != NULL)
-    {
-        std::ifstream fileStream(fileName, std::ios::in | std::ios::binary);
-
-        if (fileStream.is_open()) {
-            fileStream.seekg(0, std::ios::end);
-            size_t size = fileStream.tellg();
-            fileStream.seekg(0, std::ios::beg);
-
-            if (size > 0) {
-                try {
-                    data = new char[size * sizeof(unsigned char)];
-                }
-                catch (const std::bad_alloc& e) {
-                    std::cout << "failed to allocate memory for file data: " << fileName << '\n';
-                    throw e;
-                }
-
-                fileStream.read(data, size);
-
-                size_t count = fileStream.gcount();
-                *dataSize = count;
-                if ((*dataSize) != size)
-                    std::cout << "file partially loaded: " << dataSize << " bytes out of " << count << '\n';
-                else std::cout << "file successfuly loaded: " << fileName << '\n';
-
-            }
-            else std::cout << "could not read file size: " << fileName << '\n';
-
-            fileStream.close();
-        }
-        else std::cout << "failed opening file: " << fileName << '\n';
+    if (fileName == NULL) {
+        printf("File name provided is not valid: %s", fileName);
+        return data;
     }
-  
+    std::ifstream fileStream(fileName, std::ios::in | std::ios::binary);
+
+    if (!fileStream.is_open()) {
+        std::cout << "failed opening file: " << fileName << '\n';
+        return data;
+    }
+
+    fileStream.seekg(0, std::ios::end);
+    size_t size = fileStream.tellg();
+    fileStream.seekg(0, std::ios::beg);
+
+    if (size == 0) {
+        std::cout << "could not read file size: " << fileName << '\n';
+        return data;
+    }
+    try {
+        data = new char[size * sizeof(unsigned char)];
+    }
+    catch (const std::bad_alloc& e) {
+        std::cout << "failed to allocate memory for file data: " << fileName << '\n';
+        throw;
+    }
+
+    fileStream.read(data, size);
+
+    size_t count = fileStream.gcount();
+    *dataSize = count;
+
+    if ((*dataSize) != size)
+        std::cout << "file partially loaded: " << dataSize << " bytes out of " << count << '\n';
+    else std::cout << "file successfuly loaded: " << fileName << '\n';
+
+
+    fileStream.close();
+
     return data;
-}*/
+}
 
 
-#define zLOG(x) std::cout << x << '\n'
 
 unsigned char* LoadFileData(const char* fileName, int* dataSize)
 {
@@ -83,7 +87,7 @@ unsigned char* LoadFileData(const char* fileName, int* dataSize)
                     // dataSize is unified along raylib as a 'int' type, so, for file-sizes > INT_MAX (2147483647 bytes) we have a limitation
                     if (count > 2147483647)
                     {
-                        zLOG("FILEIO: [%s] File is bigger than 2147483647 bytes, avoid using LoadFileData()" <<  fileName);
+                        printf("FILEIO: [%s] File is bigger than 2147483647 bytes, avoid using LoadFileData()\n", fileName);
 
                         free(data);
                         data = NULL;
@@ -92,20 +96,34 @@ unsigned char* LoadFileData(const char* fileName, int* dataSize)
                     {
                         *dataSize = (int)count;
 
-                        if ((*dataSize) != size) zLOG("FILEIO: [%s] File partially loaded (%i bytes out of %i)" << fileName << dataSize << count);
-                        else zLOG("FILEIO: [%s] File loaded successfully" << fileName);
+                        if ((*dataSize) != size)
+                        {
+                            //here if you pass dataSize inside printf instead of *dataSize programm will fail at runtime
+                            //when try to use dataSize later
+                            //EVEN THOUGH THIS BRANCH IS NEVER REACHED (WTF?)
+
+                            //guess it because of how printf works
+                            //or not...
+                            //same will happen if you use std::cout << dataSize
+
+                            printf("FILEIO: [%s] File partially loaded (%i bytes out of %i)\n", fileName, *dataSize, count);
+
+                            //std::cout << "FILEIO: [" << fileName << "] File partially loaded (" << dataSize << " bytes out of " << count << ")\n";
+                        }
+                        else
+                            printf("FILEIO: [%s] File loaded successfully\n", fileName);
                     }
                 }
-                else zLOG("FILEIO: [%s] Failed to allocated memory for file reading" << fileName);
+                else printf("FILEIO: [%s] Failed to allocated memory for file reading\n", fileName);
             }
-            else zLOG("FILEIO: [%s] Failed to read file" << fileName);
+            else printf("FILEIO: [%s] Failed to read file\n", fileName);
 
             fclose(file);
         }
-        else zLOG("FILEIO: [%s] Failed to open file" << fileName);
+        else printf("FILEIO: [%s] Failed to open file\n", fileName);
 
     }
-    else zLOG("FILEIO: File name provided is not valid");
+    else printf("FILEIO: File name provided is not valid\n");
 
     return data;
 }
@@ -138,9 +156,37 @@ static void ReleaseFileGLTFCallback(const struct cgltf_memory_options* memoryOpt
     delete[] data;
 }
 
+class MeshData {
+    using Vec3 = gmtl::Vec3f;
+    using Vec2 = gmtl::Vec2f;
+
+public:
+    std::vector<float> vertices;
+    std::vector<float> normal;
+    std::vector<float> tangent;
+    std::vector<float> texcoord;
+    std::vector<float> color;
+
+    std::vector<uint32_t> indices;
+
+    std::vector<std::unique_ptr<char[]>> vertexValues;
+
+    MeshData(MeshData&& old) {
+        vertices = std::move(old.vertices);
+        vertices = std::move(old.vertices);
+        vertices = std::move(old.vertices);
+        vertices = std::move(old.vertices);
+        vertices = std::move(old.vertices);
+    }
+
+    typedef std::vector<Vec3>::const_iterator vertexIter;
 
 
-class MeshData {};
+    void Load() {
+
+    }
+
+};
 
 
 static MeshData LoadGLTF(const char* fileName)
@@ -171,7 +217,7 @@ static MeshData LoadGLTF(const char* fileName)
     ***********************************************************************************************/
 
     // Macro to simplify attributes loading code
-#define LOAD_ATTRIBUTE(accesor, numComp, dataType, dstPtr) \
+#define LOAD_ATTRIBUTE(accesor, numComp, dataType, dstVec) \
     { \
         int n = 0; \
         dataType *buffer = (dataType *)accesor->buffer_view->buffer->data + accesor->buffer_view->offset/sizeof(dataType) + accesor->offset/sizeof(dataType); \
@@ -179,13 +225,13 @@ static MeshData LoadGLTF(const char* fileName)
         {\
             for (int l = 0; l < numComp; l++) \
             {\
-                dstPtr[numComp*k + l] = buffer[n + l];\
+                dstVec[k*numComp + l] = buffer[n + l];\
             }\
             n += (int)(accesor->stride/sizeof(dataType));\
         }\
     }
 
-    MeshData model;
+    MeshData meshData;
 
     // glTF file loading
     int dataSize = 0;
@@ -199,17 +245,24 @@ static MeshData LoadGLTF(const char* fileName)
         throw e;
     }
     
-    if (fileData == nullptr) return model;
+    if (fileData == nullptr) return meshData;
 
     // glTF data loading
-    cgltf_options options;
+
+    //wasn't working until i default-initialized cgltf_options
+    //cgltf_parse later had been returning out_of_memory result (from parse_json inside because it was trying to allocate too much json tokens)
+    //but setting options.json_token_count to zero had been causing runtime failing so it must be not the only problem
+
+    cgltf_options options{};
+    
     options.type = cgltf_file_type::cgltf_file_type_invalid;
     options.file.read = LoadFileGLTFCallback;
     options.file.release = ReleaseFileGLTFCallback;
+
     cgltf_data* data = NULL;
-    std::cout << "parsing file\n";
+
     cgltf_result result = cgltf_parse(&options, fileData, dataSize, &data);
-    std::cout << "parsed file\n";
+
     
     if (result == cgltf_result_success) {
         if (data->file_type == cgltf_file_type_glb) std::cout << "Model basic data (glb) loaded successfully: " << fileName << '\n';
@@ -222,28 +275,36 @@ static MeshData LoadGLTF(const char* fileName)
         std::cout << "Images count: " << data->images_count << '\n';
         std::cout << "Textures count: " << data->textures_count << '\n';
     }
-    
+    else
+        std::cout << (int)result << '\n';
+
+
+    // Force reading data buffers (fills buffer_view->buffer->data)
+    // NOTE: If an uri is defined to base64 data or external path, it's automatically loaded
+    result = cgltf_load_buffers(&options, data, fileName);
+    if (result != cgltf_result_success) 
+        printf("MODEL: [%s] Failed to load mesh/material buffers", fileName);
+
+    int primitivesCount = 0;
+    // NOTE: We will load every primitive in the glTF as a separate raylib mesh
+    for (unsigned int i = 0; i < data->meshes_count; i++) 
+        primitivesCount += (int)data->meshes[i].primitives_count;
+
+    printf("MODEL: Meshes: %i\n", data->meshes_count);
+    printf("MODEL: Primitive count: %i\n", primitivesCount);
+
+    // Load our model data: meshes and materials
+    //model.meshCount = primitivesCount;
+    //model.meshes = RL_CALLOC(model.meshCount, sizeof(Mesh));
+
+    // NOTE: We keep an extra slot for default material, in case some mesh requires it
+    /*model.materialCount = (int)data->materials_count + 1;
+    model.materials = RL_CALLOC(model.materialCount, sizeof(Material));
+    model.materials[0] = LoadMaterialDefault();     // Load default material (index: 0)
+
+    // Load mesh-material indices, by default all meshes are mapped to material index: 0
+    model.meshMaterial = RL_CALLOC(model.meshCount, sizeof(int));*/
 #ifdef IMPLEMENTED_ZZ
-        // Force reading data buffers (fills buffer_view->buffer->data)
-        // NOTE: If an uri is defined to base64 data or external path, it's automatically loaded
-        result = cgltf_load_buffers(&options, data, fileName);
-        if (result != cgltf_result_success) TRACELOG(LOG_INFO, "MODEL: [%s] Failed to load mesh/material buffers", fileName);
-
-        int primitivesCount = 0;
-        // NOTE: We will load every primitive in the glTF as a separate raylib mesh
-        for (unsigned int i = 0; i < data->meshes_count; i++) primitivesCount += (int)data->meshes[i].primitives_count;
-
-        // Load our model data: meshes and materials
-        model.meshCount = primitivesCount;
-        model.meshes = RL_CALLOC(model.meshCount, sizeof(Mesh));
-
-        // NOTE: We keep an extra slot for default material, in case some mesh requires it
-        model.materialCount = (int)data->materials_count + 1;
-        model.materials = RL_CALLOC(model.materialCount, sizeof(Material));
-        model.materials[0] = LoadMaterialDefault();     // Load default material (index: 0)
-
-        // Load mesh-material indices, by default all meshes are mapped to material index: 0
-        model.meshMaterial = RL_CALLOC(model.meshCount, sizeof(int));
 
         // Load materials data
         //----------------------------------------------------------------------------------------------------
@@ -333,6 +394,7 @@ static MeshData LoadGLTF(const char* fileName)
             // Other possible materials not supported by raylib pipeline:
             // has_clearcoat, has_transmission, has_volume, has_ior, has specular, has_sheen
         }
+#endif
 
         // Load meshes data
         //----------------------------------------------------------------------------------------------------
@@ -361,13 +423,12 @@ static MeshData LoadGLTF(const char* fileName)
                         if ((attribute->component_type == cgltf_component_type_r_32f) && (attribute->type == cgltf_type_vec3))
                         {
                             // Init raylib mesh vertices to copy glTF attribute data
-                            model.meshes[meshIndex].vertexCount = (int)attribute->count;
-                            model.meshes[meshIndex].vertices = RL_MALLOC(attribute->count * 3 * sizeof(float));
+                            meshData.vertices.resize((int)attribute->count*3);
 
                             // Load 3 components of float data type into mesh.vertices
-                            LOAD_ATTRIBUTE(attribute, 3, float, model.meshes[meshIndex].vertices)
+                            LOAD_ATTRIBUTE(attribute, 3, float, meshData.vertices)
                         }
-                        else TRACELOG(LOG_WARNING, "MODEL: [%s] Vertices attribute data format not supported, use vec3 float", fileName);
+                        else printf("MODEL: [%s] Vertices attribute data format not supported, use vec3 float", fileName);
                     }
                     else if (data->meshes[i].primitives[p].attributes[j].type == cgltf_attribute_type_normal)   // NORMAL
                     {
@@ -376,12 +437,12 @@ static MeshData LoadGLTF(const char* fileName)
                         if ((attribute->component_type == cgltf_component_type_r_32f) && (attribute->type == cgltf_type_vec3))
                         {
                             // Init raylib mesh normals to copy glTF attribute data
-                            model.meshes[meshIndex].normals = RL_MALLOC(attribute->count * 3 * sizeof(float));
+                            meshData.normal.resize((int)attribute->count*3);
 
                             // Load 3 components of float data type into mesh.normals
-                            LOAD_ATTRIBUTE(attribute, 3, float, model.meshes[meshIndex].normals)
+                            LOAD_ATTRIBUTE(attribute, 3, float, meshData.normal)
                         }
-                        else TRACELOG(LOG_WARNING, "MODEL: [%s] Normal attribute data format not supported, use vec3 float", fileName);
+                        else printf("MODEL: [%s] Normal attribute data format not supported, use vec3 float", fileName);
                     }
                     else if (data->meshes[i].primitives[p].attributes[j].type == cgltf_attribute_type_tangent)   // TANGENT
                     {
@@ -390,12 +451,12 @@ static MeshData LoadGLTF(const char* fileName)
                         if ((attribute->component_type == cgltf_component_type_r_32f) && (attribute->type == cgltf_type_vec4))
                         {
                             // Init raylib mesh tangent to copy glTF attribute data
-                            model.meshes[meshIndex].tangents = RL_MALLOC(attribute->count * 4 * sizeof(float));
+                            meshData.tangent.resize((int)attribute->count*4);
 
                             // Load 4 components of float data type into mesh.tangents
-                            LOAD_ATTRIBUTE(attribute, 4, float, model.meshes[meshIndex].tangents)
+                            LOAD_ATTRIBUTE(attribute, 4, float, meshData.tangent);
                         }
-                        else TRACELOG(LOG_WARNING, "MODEL: [%s] Tangent attribute data format not supported, use vec4 float", fileName);
+                        else printf("MODEL: [%s] Tangent attribute data format not supported, use vec4 float", fileName);
                     }
                     else if (data->meshes[i].primitives[p].attributes[j].type == cgltf_attribute_type_texcoord) // TEXCOORD_0
                     {
@@ -406,12 +467,12 @@ static MeshData LoadGLTF(const char* fileName)
                         if ((attribute->component_type == cgltf_component_type_r_32f) && (attribute->type == cgltf_type_vec2))
                         {
                             // Init raylib mesh texcoords to copy glTF attribute data
-                            model.meshes[meshIndex].texcoords = RL_MALLOC(attribute->count * 2 * sizeof(float));
+                            meshData.texcoord.resize((int)attribute->count * 2);
 
                             // Load 3 components of float data type into mesh.texcoords
-                            LOAD_ATTRIBUTE(attribute, 2, float, model.meshes[meshIndex].texcoords)
+                            LOAD_ATTRIBUTE(attribute, 2, float, meshData.texcoord)
                         }
-                        else TRACELOG(LOG_WARNING, "MODEL: [%s] Texcoords attribute data format not supported, use vec2 float", fileName);
+                        else printf("MODEL: [%s] Texcoords attribute data format not supported, use vec2 float", fileName);
                     }
                     else if (data->meshes[i].primitives[p].attributes[j].type == cgltf_attribute_type_color)    // COLOR_0
                     {
@@ -422,40 +483,39 @@ static MeshData LoadGLTF(const char* fileName)
                         if ((attribute->component_type == cgltf_component_type_r_8u) && (attribute->type == cgltf_type_vec4))
                         {
                             // Init raylib mesh color to copy glTF attribute data
-                            model.meshes[meshIndex].colors = RL_MALLOC(attribute->count * 4 * sizeof(unsigned char));
+                            std::vector<char> temp;
+                            
+                            temp.resize((int)attribute->count * 4);
 
                             // Load 4 components of unsigned char data type into mesh.colors
-                            LOAD_ATTRIBUTE(attribute, 4, unsigned char, model.meshes[meshIndex].colors)
+                            LOAD_ATTRIBUTE(attribute, 4, unsigned char, temp);
+
+                            meshData.color.resize((int)attribute->count * 4);
+                            for (unsigned int c = 0; c < attribute->count * 4; c++) meshData.color[c] = (float)temp[c] / 255.0f;
+
                         }
                         else if ((attribute->component_type == cgltf_component_type_r_16u) && (attribute->type == cgltf_type_vec4))
                         {
                             // Init raylib mesh color to copy glTF attribute data
-                            model.meshes[meshIndex].colors = RL_MALLOC(attribute->count * 4 * sizeof(unsigned char));
+                            std::vector<short> temp;
 
-                            // Load data into a temp buffer to be converted to raylib data type
-                            unsigned short* temp = RL_MALLOC(attribute->count * 4 * sizeof(unsigned short));
+                            temp.resize((int)attribute->count * 4);
                             LOAD_ATTRIBUTE(attribute, 4, unsigned short, temp);
 
                             // Convert data to raylib color data type (4 bytes)
-                            for (unsigned int c = 0; c < attribute->count * 4; c++) model.meshes[meshIndex].colors[c] = (unsigned char)(((float)temp[c] / 65535.0f) * 255.0f);
-
-                            RL_FREE(temp);
+                            meshData.color.resize((int)attribute->count * 4);
+                            for (unsigned int c = 0; c < attribute->count * 4; c++) meshData.color[c] = (float)temp[c] / 65535.0f;
                         }
                         else if ((attribute->component_type == cgltf_component_type_r_32f) && (attribute->type == cgltf_type_vec4))
                         {
                             // Init raylib mesh color to copy glTF attribute data
-                            model.meshes[meshIndex].colors = RL_MALLOC(attribute->count * 4 * sizeof(unsigned char));
+                            meshData.color.resize((int)attribute->count * 4);
 
                             // Load data into a temp buffer to be converted to raylib data type
-                            float* temp = RL_MALLOC(attribute->count * 4 * sizeof(float));
-                            LOAD_ATTRIBUTE(attribute, 4, float, temp);
 
-                            // Convert data to raylib color data type (4 bytes), we expect the color data normalized
-                            for (unsigned int c = 0; c < attribute->count * 4; c++) model.meshes[meshIndex].colors[c] = (unsigned char)(temp[c] * 255.0f);
-
-                            RL_FREE(temp);
+                            LOAD_ATTRIBUTE(attribute, 4, float, meshData.texcoord);
                         }
-                        else TRACELOG(LOG_WARNING, "MODEL: [%s] Color attribute data format not supported", fileName);
+                        else printf( "MODEL: [%s] Color attribute data format not supported", fileName);
                     }
 
                     // NOTE: Attributes related to animations are processed separately
@@ -466,39 +526,30 @@ static MeshData LoadGLTF(const char* fileName)
                 {
                     cgltf_accessor* attribute = data->meshes[i].primitives[p].indices;
 
-                    model.meshes[meshIndex].triangleCount = (int)attribute->count / 3;
+                    //model.meshes[meshIndex].triangleCount = (int)attribute->count / 3;
 
                     if (attribute->component_type == cgltf_component_type_r_16u)
                     {
                         // Init raylib mesh indices to copy glTF attribute data
-                        model.meshes[meshIndex].indices = RL_MALLOC(attribute->count * sizeof(unsigned short));
+                        meshData.indices.resize(attribute->count);
 
                         // Load unsigned short data type into mesh.indices
-                        LOAD_ATTRIBUTE(attribute, 1, unsigned short, model.meshes[meshIndex].indices)
+                        LOAD_ATTRIBUTE(attribute, 1, unsigned short, meshData.indices);
                     }
                     else if (attribute->component_type == cgltf_component_type_r_32u)
                     {
                         // Init raylib mesh indices to copy glTF attribute data
-                        model.meshes[meshIndex].indices = RL_MALLOC(attribute->count * sizeof(unsigned short));
+                        meshData.indices.resize(attribute->count);
 
-                        // Load data into a temp buffer to be converted to raylib data type
-                        unsigned int* temp = RL_MALLOC(attribute->count * sizeof(unsigned int));
-                        LOAD_ATTRIBUTE(attribute, 1, unsigned int, temp);
-
-                        // Convert data to raylib indices data type (unsigned short)
-                        for (unsigned int d = 0; d < attribute->count; d++) model.meshes[meshIndex].indices[d] = (unsigned short)temp[d];
-
-                        TRACELOG(LOG_WARNING, "MODEL: [%s] Indices data converted from u32 to u16, possible loss of data", fileName);
-
-                        RL_FREE(temp);
+                        LOAD_ATTRIBUTE(attribute, 1, unsigned int, meshData.indices);
                     }
-                    else TRACELOG(LOG_WARNING, "MODEL: [%s] Indices data format not supported, use u16", fileName);
+                    else printf("MODEL: [%s] Indices data format not supported, use u32", fileName);
                 }
-                else model.meshes[meshIndex].triangleCount = model.meshes[meshIndex].vertexCount / 3;    // Unindexed mesh
+                else printf("MODEL: [%s] No indices data!", fileName);//model.meshes[meshIndex].triangleCount = model.meshes[meshIndex].vertexCount / 3;    // Unindexed mesh
 
                 // Assign to the primitive mesh the corresponding material index
                 // NOTE: If no material defined, mesh uses the already assigned default material (index: 0)
-                for (unsigned int m = 0; m < data->materials_count; m++)
+                /*for (unsigned int m = 0; m < data->materials_count; m++)
                 {
                     // The primitive actually keeps the pointer to the corresponding material,
                     // raylib instead assigns to the mesh the by its index, as loaded in model.materials array
@@ -509,12 +560,12 @@ static MeshData LoadGLTF(const char* fileName)
                         model.meshMaterial[meshIndex] = m + 1;
                         break;
                     }
-                }
+                }*/
 
                 meshIndex++;       // Move to next mesh
             }
         }
-
+#ifdef IMPLEMENTED_ZZ
         // Load glTF meshes animation data
         // REF: https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#skins
         // REF: https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
@@ -653,6 +704,6 @@ static MeshData LoadGLTF(const char* fileName)
     // WARNING: cgltf requires the file pointer available while reading data
     UnloadFileData(fileData);
 #endif // IMPLEMENTED_ZZ
-    return model;
+    return meshData;
 }
 
