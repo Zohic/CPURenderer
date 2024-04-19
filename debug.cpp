@@ -2,6 +2,7 @@
 //#include "MeshLoader.h"
 #include <iostream>
 #include "Zohich3DEngine.h"
+#include "MeshLoader.h"
 
 /*
 
@@ -28,50 +29,65 @@ Interfaces:
 /*
 	ResourceStorage storage;
 	MeshLoader meshLoader;
-	VertexPipeLine pipeLine;
-	Renderer renderer;
 
 	VertexBuffer mainVertexBuffer;
-	FrameBuffer screenBuffer;
+	FragmentBuffer screenBuffer;
 
-	storage.RegisterMesh("coin mesh", meshLoader.Load("coin.gltf));
+	Transformer transformer(&mainVertexBuffer);
+	Rasterizer rasterizer(&screenBuffer);
 
-	const Material normalMat(
-		ATTR_NORMAL|ATTR_TEXCOORD,
-		[](const &VertexShaderInput input) {
-			return input.vertexData.position * input.objectData.worldMatrix * input.sceneData.viewMatrix;
-		},
-		[](const PixelShaderInput &input) {
-			return Vec4(input.attributes.normal.x, input.attributes.normal.y, input.attributes.normal.z, 1.0);
-		}
-	);
+	
 
-	storage.RegisterMaterial("coin material", &normalMat);
+	try {
+		storage.ReserveMesh("coin");
+		storage.ReserveMaterial("simple");
+	
+		storage.AccessMesh("coin") = meshLoader.Load("coin.gltf);
 
-	std::vector<RenderObjectRef> coins(10);
+		storage.AccessMaterial("simple") = new Material(
+			ATTR_NORMAL|ATTR_TEXCOORD,
+			[](const &VertexShaderInput input) {
+				return input.vertexData.position * input.objectData.worldMatrix * input.sceneData.viewMatrix;
+			},
+			[](const PixelShaderInput &input) {
+				return Vec4(input.attributes.normal.x, input.attributes.normal.y, input.attributes.normal.z, 1.0);
+			}
+		);
 
-	for(int i=0; i < 10; i++) {
-		coins.push_back(new RenderObject(Vec3(i*5, 0, 0), storage.GetMesh("coin mesh"), storage.GetMaterial("normal material")));
+		storage.RegisterShape("coin", "coin", "simple");
+
+	} catch(std::exception& exc) {
+		printf("error during filling storage: %s", exc.what());
 	}
 
-	pipeLine.AddObjects(coins.begin(), coins.end());
+	std::vector<RenderInstance> coins(10);
 
-	pipeLine.SetVertexBuffer(&mainVertexBuffer);
+	for(int i=0; i < 10; i++) {
+		coins.push_back(new RenderInstance(Vec3(i*5, 0, 0), storage.GetShape("coin")));
+	}
 
-	pipeLine.SetVertexBuffer(&mainVertexBuffer);
-	renderer.SetFrameBuffer(&screenBuffer);
+	try {
+		transformer.AddObjects(coins.begin(), coins.end());
+		transformer.FillVertexBuffer();
 
-	pipeLine.FillVertexBuffer();
-	rendere.FillFrameBuffer();
-
+		rasterizer.FillFrameBuffer(transformer.FlushBuffer());
+	} catch(std::exception& exc) {
+		printf("error during rendering: %s", exc.what());
+	}
 */
 
 
 
 int main() {
-	/*cpuRenderA::MeshData mesh; 
-	if (!mesh.LoadGLTF("testCube.glb")) {
+	cpuRenderSimple::MeshLoader meshLoader; 
+	cpuRenderBase::MeshData mesh;
+
+	if (meshLoader.LoadMesh("testCube.glb", mesh) == cpuRenderBase::ErrorCode::OK) {
 		mesh.PrintData();
-	}*/	
+	}
+
+	std::cout << sizeof(std::vector<float>) << std::endl;
+	std::cout << sizeof(std::vector<uint32_t>) << std::endl;
+
 	return 0;
 }
