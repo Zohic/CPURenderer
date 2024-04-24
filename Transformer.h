@@ -4,19 +4,25 @@
 namespace cpuRenderSimple {
     using namespace cpuRenderBase;
 
-    class Transformer final: public TransformerBase {
+    template<typename VertexBufferType>
+    class Transformer final: public TransformerBase<VertexBufferType> {
         std::unordered_map<size_t, std::vector<float>> buffers;
     public:
+
+        Transformer(IResourceStorge* stor, VertexBufferType* buff):TransformerBase<VertexBufferType>(stor, buff) {
+
+        }
+
         void ProcessRenderObject(const RenderInstance& renderInst) override {
                 
             const MeshData& mesh = renderInst.GetShape()->GetMesh();
-            for (int i = 0; i < mesh.GetVertexCount(); i++) {
-                Vec3 vert(
-                    mesh.GetAttr(MeshData::VERTEX_OFFSET, i),
-                    mesh.GetAttr(MeshData::VERTEX_OFFSET, i + 1),
-                    mesh.GetAttr(MeshData::VERTEX_OFFSET, i + 2));
 
-                buffer->InsertVertex(vert);
+            const VertexShader vertShader = (VertexShader)renderInst.GetShape()->GetMaterial().VertexShader();
+
+            for (int i = 0; i < mesh.GetVertexCount(); i++) {
+
+                VertexShaderInput input{ mesh.GetAttr(MeshData::VERTEX_OFFSET, i) };
+                this->buffer->InsertVertex(vertShader(input));
             }
         }
 
@@ -25,7 +31,5 @@ namespace cpuRenderSimple {
         }
 
     };
-
-    
 
 }

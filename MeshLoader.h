@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include "Render.h"
+#include "cgltf/cgltf.h"
 
 char* LoadFileData(const char* fileName, size_t* dataSize) {
 
@@ -63,7 +64,7 @@ namespace cpuRenderSimple {
 
     class MeshLoader final: IMeshLoader {
     public:
-        ErrorCode LoadMesh(const char* fileName, MeshData& outMesh) const noexcept override  {
+        void LoadMesh(const char* fileName, MeshData& outMesh) const noexcept override  {
 
             //Function initially implemented by Wilhem Barbier(@wbrbr), with modifications by Tyler Bezera(@gamerfiend)
 
@@ -76,7 +77,7 @@ namespace cpuRenderSimple {
 
             if (fileData == nullptr) {
                 printf("failed to load file (%s) data", fileName);
-                return ErrorCode::FAILED_TO_OPEN_FILE;
+                throw std::exception("");
             }
 
             //wasn't working until i default-initialized cgltf_options
@@ -274,8 +275,6 @@ namespace cpuRenderSimple {
 
             delete[] fileData;
             cgltf_free(data);
-            return ErrorCode::OK;
         }
     };
-
 }

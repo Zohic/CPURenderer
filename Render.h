@@ -1,7 +1,6 @@
 #pragma once
 #include <unordered_map>
 #include "gmtl/gmtl.h"
-#include "cgltf/cgltf.h"
 #include <string>
 
 namespace cpuRenderBase {
@@ -145,23 +144,22 @@ namespace cpuRenderBase {
 	};
 	
 	class VertexShaderInput {
-		/*const Vec2* const uv;
-		const Vec3* const pos;
-		const Vec3* const norm;
-		const Vec4* const tangent;
-		const Vec4* const color;*/
-
+		
 	public:
-		VertexShaderInput() {
+		Vec3 pos;
+		VertexShaderInput(Vec3 ipos): pos(ipos) {
 
 		}
 	};
+	class FragmentShaderInput;
+
 	typedef Vec3(*VertexShader)(const VertexShaderInput& v_in);
+	typedef Vec3(*FragmentShader)(const FragmentShaderInput& f_in);
 
 	class Material {
 
 		VertexShader vertexShader = nullptr;
-		void (*pixelShader)(Vec3, float*) = nullptr;
+		FragmentShader fragmentShader = nullptr;
 
 		uint8_t attributeRequirementMask = 0;
 	public:
@@ -255,9 +253,11 @@ namespace cpuRenderBase {
 		Transform transform; //public since any value is valid
 	private:
 		RenderShape *shape;
-		RenderInstance() {
 
-		}
+		RenderInstance() = delete;
+		//makes no sence to move objects of this class
+		RenderInstance(RenderInstance&& other) = delete;
+		RenderInstance& operator=(RenderInstance&& other) = delete;
 	public:
 		RenderInstance(RenderShape* ishapeID) : transform(), shape(ishapeID) {
 
@@ -265,31 +265,21 @@ namespace cpuRenderBase {
 		RenderInstance(Transform itrans, RenderShape* ishapeID) : transform(itrans), shape(ishapeID) {
 
 		}
+
+		RenderInstance(const RenderInstance& other): transform(other.transform), shape(other.shape) {
+
+		}
+
+		RenderInstance& operator=(const RenderInstance& other) {
+			transform = other.transform;
+			shape = other.shape;
+		}
+
 		const RenderShape* GetShape() const {
 			return shape;
 		}
 	};
 
-	class VertexBuffer {
-		std::vector<float> data;
-		std::vector<size_t> materialOffset;
-
-	public:
-		VertexBuffer() : data(200) {
-
-		}
-
-		void InsertVertex(const Vec3& v) {
-			data.push_back(v.x());
-			data.push_back(v.y());
-			data.push_back(v.z());
-		}
-
-		void Clear() {
-			data.clear();
-			materialOffset.clear();
-		}
-	};
 	
 	class FragmentBuffer {
 		uint32_t width, height;
@@ -351,36 +341,63 @@ namespace cpuRenderBase {
 
 	};
 
+	class VertexBufferBase {
+	public:
+		//did you know that functions defined in classes are implicitly inline?
+		virtual inline void InsertValue(float val) = 0;
+		virtual void InsertVertex(const Vec3& vert) = 0;
+
+		virtual size_t GetVertexCount() const = 0;
+		virtual float GetVertX(size_t ind) const = 0;
+		virtual float GetVertY(size_t ind) const = 0;
+		virtual float GetVertZ(size_t ind) const = 0;
+
+		virtual void Clear() = 0;
+	};
+	
+	template<typename VertexBufferType>
 	class TransformerBase {
+	private:
+		TransformerBase() {}
 
 	protected:
 		IResourceStorge* storage = nullptr;
-		VertexBuffer* buffer = nullptr;
+		VertexBufferType* buffer = nullptr;
 
-		TransformerBase() {}
+		
 	public:
 		Camera cam;
 		
-		TransformerBase(IResourceStorge* stor, VertexBuffer* buff) : storage(stor), buffer(buff) {
-
+		TransformerBase(IResourceStorge* stor, VertexBufferType* buff) : storage(stor), buffer(buff) {
+			if (!stor)
+				throw std::exception("resource storage pointer is null");
+			if (!buff)
+				throw std::exception("vertex buffer pointer is null");
 		}
 		virtual void ProcessRenderObject(const RenderInstance& renderObject) = 0;
 	};
-	
-	class RasterizerBase {
-	protected:
-		VertexBuffer* vertBuffer;
-		FragmentBuffer* fragBuffer;
-		RasterizerBase() {}
-	public:
-		RasterizerBase(VertexBuffer* ivertBuffer, FragmentBuffer* ifragBuffer) : vertBuffer(ivertBuffer), fragBuffer(ifragBuffer) {
 
-		}
-
-		DrawWireTrinagles() {
-
-		}
+	class IDrawingFunctional {
+		virtual void DrawLine(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2) = 0;
 	};
-	
+
+	template<typename VertexBufferType, typename DrawingFunctional>
+	class RasterizerBase {
+	private:
+		RasterizerBase() {}
+	protected:
+		VertexBufferType* vertexBuffer;
+		DrawingFunctional* drawingTool;
+	public:
+		
+		RasterizerBase(VertexBufferType* ivertBuffer, DrawingFunctional* idrawingTool) : vertexBuffer(ivertBuffer), drawingTool(idrawingTool) {
+			if (!ivertBuffer)
+				throw std::exception("vertex buffer pointer is null");
+			if (!idrawingTool)
+				throw std::exception("drawing tool pointer is null");
+		}
+
+		virtual void DrawWires() = 0;
+	};
 }
 
