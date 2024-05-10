@@ -3,19 +3,20 @@
 #include "gmtl/gmtl.h"
 #include <string>
 
+
+
 namespace cpuRenderBase {
-	
 	using Vec2 = gmtl::Vec2f;
 	using Vec3 = gmtl::Vec3f;
 	using Vec4 = gmtl::Vec4f;
 	using Mat4x4 = gmtl::Matrix44f;
 
 	class MeshData {
-		std::vector<float> vertices;
-		std::vector<float> normal;
-		std::vector<float> tangent;
-		std::vector<float> texcoord;
-		std::vector<float> color;
+		std::vector<Vec3> vertices;
+		std::vector<Vec3> normal;
+		std::vector<Vec4> tangent;
+		std::vector<Vec2> texcoord;
+		std::vector<Vec4> color;
 
 		std::vector<uint32_t> indices;
 
@@ -23,17 +24,17 @@ namespace cpuRenderBase {
 		uint32_t triangleCount;
 
 	public:
-		static constexpr size_t VERTEX_OFFSET = 0;
-		static constexpr size_t NORMAL_OFFSET = 1;
-		static constexpr size_t TANGENT_OFFSET = 2;
-		static constexpr size_t TEXCOORD_OFFSET = 3;
-		static constexpr size_t COLOR_OFFSET = 4;
+		static constexpr size_t ATTR_POS = 0Ui64;
+		static constexpr size_t ATTR_NORMAL = 1Ui64;
+		static constexpr size_t ATTR_TANGENT = 2Ui64;
+		static constexpr size_t ATTR_TEXCOORD = 3Ui64;
+		static constexpr size_t ATTR_COLOR = 4Ui64;
 
-		static constexpr uint8_t ATTR_POS_MASK = 1;
-		static constexpr uint8_t ATTR_NORMAL_MASK = 2;
-		static constexpr uint8_t ATTR_TANGENT_MASK = 4;
-		static constexpr uint8_t ATTR_TEXCOORD_MASK = 8;
-		static constexpr uint8_t ATTR_COLOR_MASK = 16;
+		static constexpr uint8_t ATTR_POS_MASK = 1Ui8;
+		static constexpr uint8_t ATTR_NORMAL_MASK = 2Ui8;
+		static constexpr uint8_t ATTR_TANGENT_MASK = 4Ui8;
+		static constexpr uint8_t ATTR_TEXCOORD_MASK = 8Ui8;
+		static constexpr uint8_t ATTR_COLOR_MASK = 16Ui8;
 
 
 		MeshData() : vertices(), normal(), tangent(), texcoord(), color(), indices(), attributeAvailabiltyMask(0), triangleCount(0) {
@@ -66,11 +67,12 @@ namespace cpuRenderBase {
 			attributeAvailabiltyMask = old.attributeAvailabiltyMask;
 			old.attributeAvailabiltyMask = 0;
 		}
-		void SetList(size_t ind, std::vector<float>&& list) noexcept {
-			if (ind > COLOR_OFFSET) {
+		
+		void SetAttr(size_t ind, std::vector<float>&& list) {
+			if (ind > ATTR_COLOR) {
 				throw std::exception("invalid list ind");
 			}
-
+		
 			*(((std::vector<float>*)(this)) + ind) = list;
 		}
 		void SetIndices(std::vector<uint32_t>&& list) {
@@ -124,15 +126,29 @@ namespace cpuRenderBase {
 			triangleCount = cnt;
 		}
 
-		float GetAttr(size_t attrInd, size_t ind) const {
-			if (attrInd > COLOR_OFFSET) 
-				throw std::exception("invalid list ind");
+		void SetAttributeAvailability(uint8_t mask) {
+			attributeAvailabiltyMask = mask;
+		}
 
-			return (*(((std::vector<float>*)(this)) + ind))[ind];
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="ind"> - index of vertex in the list of indices</param>
+		/// <returns>Vec3 hehe</returns>
+		const Vec3& GetPos(size_t ind) const {
+			if (ind > indices.size())
+				throw std::exception("Getting pos attribute out of bounds");
+			return vertices[indices[ind]];
+		}
+
+		const Vec3& GetNormal(size_t ind) const {
+			if (ind > indices.size())
+				throw std::exception("Getting normal attribute out of bounds");
+			return normal[indices[ind]];
 		}
 
 		size_t GetVertexCount() const {
-			return vertices.size();
+			return vertices.size() / 3;
 		}
 		uint32_t GetTriangleCount() const {
 			return triangleCount;
@@ -143,53 +159,186 @@ namespace cpuRenderBase {
 
 	};
 	
-	class VertexShaderInput {
-		
-	public:
-		Vec3 pos;
-		VertexShaderInput(Vec3 ipos): pos(ipos) {
+	class VertexData {
+		std::unique_ptr<float[]> attributes;
+
+		void SetPos(const Vec3& pos) {
+			attributes.get()[0] = pos.x();
+			attributes.get()[1] = pos.y();
+			attributes.get()[2] = pos.z();
+		}
+
+		void SetNormal(const Vec3& norm) {
+			attributes.get()[3] = norm.x();
+			attributes.get()[4] = norm.y();
+			attributes.get()[5] = norm.z();
+		}
+
+		void SetTangent(const Vec3& norm) {
+			attributes.get()[3] = norm.x();
+			attributes.get()[4] = norm.y();
+			attributes.get()[5] = norm.z();
+		}
+
+		inline size_t GetAttrFloatSize(bool attrMask[5]) {
+			return 3ui64 +
+				3ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_NORMAL]) +
+				4ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_TANGENT]) +
+				2ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_TEXCOORD]) +
+				4ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_COLOR]);
 
 		}
-	};
-	class FragmentShaderInput;
 
-	typedef Vec3(*VertexShader)(const VertexShaderInput& v_in);
-	typedef Vec3(*FragmentShader)(const FragmentShaderInput& f_in);
+		VertexData(const VertexData& other) = delete;
+		VertexData& operator=(const VertexData& other) = delete;
+
+	public:
+		VertexData() {
+
+		}
+		VertexData(VertexData&& old) noexcept {
+			attributes = std::move(old.attributes);
+		}
+		VertexData& operator=(VertexData&& old) noexcept {
+			attributes = std::move(old.attributes);
+			return *this;
+		}
+
+		const Vec3& GetPos() const {
+			if (!attributes.get())
+				throw std::exception("cannot GetPos(): vertex data is null\n");
+			return Vec3(attributes.get()[0], attributes.get()[1], attributes.get()[2]);
+		}
+
+		Vec3 GetNormal() const {
+
+			const float* const nums = (attributes.get() + 3);
+			return Vec3(nums[0], nums[1], nums[2]);
+		}
+
+		Vec4 GetTangent(bool attrMask[5]) const {
+			const float* const nums = (attributes.get()
+				+ 3u
+				+ 3u * static_cast<unsigned int>(attrMask[1]));
+
+			return Vec4(nums[0], nums[1], nums[2], nums[3]);
+		}
+
+		void FillFromMesh(const MeshData* const mesh, bool attrReqList[5], size_t vertInd) {
+			attributes.reset(new float[GetAttrFloatSize(attrReqList)]);
+
+			SetPos(mesh->GetPos(vertInd));
+			if (attrReqList[1])
+				SetNormal(mesh->GetNormal(vertInd));
+		}
+
+		void Print() const {
+			printf("\tpos is: (%f, %f, %f)\n", GetPos().x(), GetPos().y(), GetPos().z());
+		}
+
+	};
+
+	typedef VertexData& (*VertexShader)(VertexData& v_in);
+	typedef Vec4 (*FragmentShader)(const VertexData& f_in);
+
+	const uint8_t atrr_offsets[5] = {
+		MeshData::ATTR_POS_MASK,
+		MeshData::ATTR_NORMAL_MASK,
+		MeshData::ATTR_TANGENT_MASK,
+		MeshData::ATTR_TEXCOORD_MASK,
+		MeshData::ATTR_COLOR_MASK };
 
 	class Material {
 
 		VertexShader vertexShader = nullptr;
 		FragmentShader fragmentShader = nullptr;
 
-		uint8_t attributeRequirementMask = 0;
-	public:
-		Material() {
+		uint8_t attributeRequirementMask;
+		bool attributeRequirementList[5];
 
+		Material() = delete;
+		Material(const Material& other) = delete;
+		Material(Material&& old) = delete;
+
+		Material& operator=(const Material& other) = delete;
+		Material& operator=(Material&& old) = delete;
+	public:
+
+#define AttrFromMask(attr) (attributeRequirementMask & atrr_offsets[attr]) >> attr
+		Material(uint8_t mask): attributeRequirementMask(mask){
+
+			if (!(AttrFromMask(MeshData::ATTR_POS)))
+				throw std::exception("material has no POSITION requirement");
+
+			attributeRequirementList[0] = true;
+			attributeRequirementList[1] = AttrFromMask(MeshData::ATTR_NORMAL);
+			attributeRequirementList[2] = AttrFromMask(MeshData::ATTR_TANGENT);
+			attributeRequirementList[3] = AttrFromMask(MeshData::ATTR_TEXCOORD);
+			attributeRequirementList[4] = AttrFromMask(MeshData::ATTR_COLOR);
+		}
+#undef AttrFromMask(attr)
+
+		Material(bool list[5]): attributeRequirementList() {
+
+			if (!list[0])
+				throw std::exception("material has no POSITION requirement");
+
+			attributeRequirementMask =
+				1ui8 |
+				atrr_offsets[1] * list[1] |
+				atrr_offsets[2] * list[2] |
+				atrr_offsets[3] * list[3] |
+				atrr_offsets[4] * list[4];
+
+			memcpy(attributeRequirementList, list, 5ui64 * sizeof(bool));
 		}
 
-		const void* const VertexShader() const {
+		void SetVertexShader(const VertexShader vs) {
+			if (vs == nullptr)
+				throw std::exception("setting vertex shader to null");
+			vertexShader = vs;
+		}
+		void SetFragmentShader(const FragmentShader fs) {
+			if (fs == nullptr)
+				throw std::exception("setting fragment shader to null");
+			fragmentShader = fs;
+		}
+
+		const VertexShader GetVertexShader() const {
+			if (!vertexShader)
+				throw std::exception("trying to access vertex shader that is not existent");
 			return vertexShader;
+		}
+		const FragmentShader GetFragmentShader() const {
+			if (!vertexShader)
+				throw std::exception("trying to access vertex shader that is not existent");
+			return fragmentShader;
 		}
 
 		uint8_t GetAttrMask() const {
 			return attributeRequirementMask;
 		}
-		void FillAttributes(char* dst) {
 
+		const bool* GetAttrList() const {
+			return attributeRequirementList;
 		}
-
-
-	public:
-
+		uint8_t HasAttr(size_t attr) const {
+			return attributeRequirementList[attr];
+		}
+		size_t AttributesSize() const {
+			return 3ui64 +
+				HasAttr(MeshData::ATTR_NORMAL) * 3ui64 +
+				HasAttr(MeshData::ATTR_TANGENT) * 4ui64 +
+				HasAttr(MeshData::ATTR_TEXCOORD) * 2ui64 +
+				HasAttr(MeshData::ATTR_COLOR) * 4ui64;
+		}
 	};
 	
 	class RenderShape {
 	private:
-		MeshData* mesh = nullptr;
-		Material* material = nullptr;
-		RenderShape() {
-
-		}
+		MeshData* mesh;
+		Material* material;
+		RenderShape() = delete;
 	public:
 		RenderShape(MeshData* imesh, Material* imat): mesh(imesh), material(imat) {
 
@@ -215,6 +364,8 @@ namespace cpuRenderBase {
 		}
 
 		const MeshData& GetMesh() const {
+			if (!mesh)
+				throw std::exception("trying to access mesh that is not existent");
 			return *mesh;
 		}
 		const Material& GetMaterial() const {
@@ -247,7 +398,24 @@ namespace cpuRenderBase {
 		{
 
 		}
+		Mat4x4 GetWorldMatrix() const {
+			Mat4x4 m1;
+			m1[0][3] = pos.x();
+			m1[1][3] = pos.y();
+			m1[2][3] = pos.z();
+			m1[3][3] = 1.0f;
+
+			Mat4x4 m2;
+
+			m2[0][0] = cosf(rot.z());
+			m2[0][1] = sinf(rot.z());
+			m2[1][0] = -sinf(rot.z());
+			m2[1][1] = cosf(rot.z());
+
+			return m1*m2;
+		}
 	};
+	
 	class RenderInstance {
 	public:
 		Transform transform; //public since any value is valid
@@ -256,13 +424,11 @@ namespace cpuRenderBase {
 
 		RenderInstance() = delete;
 		//makes no sence to move objects of this class
-		RenderInstance(RenderInstance&& other) = delete;
-		RenderInstance& operator=(RenderInstance&& other) = delete;
 	public:
-		RenderInstance(RenderShape* ishapeID) : transform(), shape(ishapeID) {
+		RenderInstance(const RenderShape* ishapeID) : transform(), shape(const_cast<RenderShape*>(ishapeID)) {
 
 		}
-		RenderInstance(Transform itrans, RenderShape* ishapeID) : transform(itrans), shape(ishapeID) {
+		RenderInstance(Transform itrans, const RenderShape* ishapeID) : transform(itrans), shape(const_cast<RenderShape*>(ishapeID)) {
 
 		}
 
@@ -281,7 +447,7 @@ namespace cpuRenderBase {
 	};
 
 	
-	class FragmentBuffer {
+	/*class FragmentBuffer {
 		uint32_t width, height;
 		float* data;
 		FragmentBuffer() { }
@@ -300,25 +466,11 @@ namespace cpuRenderBase {
 				delete[] data;
 		}
 
-	};
-
-	class IResourceStorge {
-	public:
-		virtual void ReserveMesh(std::string& name) = 0;
-		virtual void ReserveMaterial(std::string& name) = 0;
-
-		virtual MeshData& GetMesh(std::string& name) = 0;
-		virtual Material& GetMaterial(std::string& name) = 0;
-
-		virtual void RegisterRenderShape(std::string& shapeName, std::string& meshName, std::string& matName) = 0;
-		virtual const RenderShape& GetShape(std::string& shapeName) const = 0;
-
-	};
+	};*/
 
 	class IMeshLoader {
-		virtual void LoadMesh(const char* fileName, MeshData& outMesh) const noexcept = 0;
+		virtual void LoadMesh(const char* fileName, MeshData& outMesh) const = 0;
 	};
-
 
 	class Camera {
 		Mat4x4 projectionMatrix;
@@ -341,47 +493,57 @@ namespace cpuRenderBase {
 
 	};
 
+	class Scene {
+		std::unordered_map<const Material*, std::vector<RenderInstance>> instancesByMaterial;
+		
+		RenderInstance& InsertRenderInstance(const RenderInstance& rendInst) {
+			const Material* matPtr = &(rendInst.GetShape()->GetMaterial());
+			instancesByMaterial[matPtr].push_back(rendInst);
+			return *(instancesByMaterial.at(matPtr).end() - 1);
+		}
+
+		std::unordered_map<const Material*, std::vector<RenderInstance>>::const_iterator GetInsatneces() const {
+			return instancesByMaterial.cbegin();
+		}
+
+
+	};
+
 	class VertexBufferBase {
 	public:
 		//did you know that functions defined in classes are implicitly inline?
-		virtual inline void InsertValue(float val) = 0;
-		virtual void InsertVertex(const Vec3& vert) = 0;
-
+		virtual void InsertVertex(VertexData& vert, const Material* const mat) = 0;
+		virtual const VertexData& GetVert() = 0;
 		virtual size_t GetVertexCount() const = 0;
-		virtual float GetVertX(size_t ind) const = 0;
-		virtual float GetVertY(size_t ind) const = 0;
-		virtual float GetVertZ(size_t ind) const = 0;
-
+		virtual const Material& GetMaterial() const = 0;
+		virtual bool End() const = 0;
 		virtual void Clear() = 0;
 	};
 	
 	template<typename VertexBufferType>
 	class TransformerBase {
 	private:
-		TransformerBase() {}
+		TransformerBase() = delete;
 
 	protected:
-		IResourceStorge* storage = nullptr;
 		VertexBufferType* buffer = nullptr;
-
-		
 	public:
 		Camera cam;
 		
-		TransformerBase(IResourceStorge* stor, VertexBufferType* buff) : storage(stor), buffer(buff) {
-			if (!stor)
-				throw std::exception("resource storage pointer is null");
+		TransformerBase(VertexBufferType* buff) : buffer(buff) {
 			if (!buff)
 				throw std::exception("vertex buffer pointer is null");
 		}
-		virtual void ProcessRenderObject(const RenderInstance& renderObject) = 0;
+		virtual void ProcessRenderInstance(const RenderInstance& renderObject) = 0;
 	};
 
 	class IDrawingFunctional {
-		virtual void DrawLine(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2) = 0;
+		virtual void DrawPixel(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) = 0;
+		virtual void DrawLine(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint8_t r, uint8_t g, uint8_t b) = 0;
+		virtual void FillTriangle(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t x3, uint32_t y3, uint8_t r, uint8_t g, uint8_t b) = 0;
 	};
 
-	template<typename VertexBufferType, typename DrawingFunctional>
+	template<typename VertexBufferType = VertexBufferBase, typename DrawingFunctional = IDrawingFunctional>
 	class RasterizerBase {
 	private:
 		RasterizerBase() {}
@@ -398,6 +560,7 @@ namespace cpuRenderBase {
 		}
 
 		virtual void DrawWires() = 0;
+		virtual void RenderTriangles() = 0;
 	};
 }
 

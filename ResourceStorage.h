@@ -5,7 +5,7 @@ namespace cpuRenderSimple {
 	using namespace cpuRenderBase;
 	using namespace std::string_literals;
 
-	class ResourceStorge final: public IResourceStorge {
+	class ResourceStorge {
 
 		std::unordered_map<std::string, std::unique_ptr<MeshData>> meshStorage;
 		std::unordered_map<std::string, std::unique_ptr<Material>> materialStorage;
@@ -13,38 +13,45 @@ namespace cpuRenderSimple {
 
 		size_t uidCounter = 0;
 
+		ResourceStorge(const ResourceStorge&) = delete;
+		ResourceStorge(ResourceStorge&&) = delete;
+
 	public:
-		virtual void ReserveMesh(std::string& name) override {
+
+		ResourceStorge() = default;
+
+
+		void ReserveMesh(const std::string& name) {
 			if (meshStorage.find(name) != meshStorage.end())
 				throw std::exception(("a mesh with that name is already reserved: "s + name).c_str());
 
-			meshStorage[name] = nullptr;
+			meshStorage[name].reset(new MeshData());
 		}
-		virtual void ReserveMaterial(std::string& name) override {
+		void ReserveMaterial(const std::string& name, uint8_t mask) {
 			if (materialStorage.find(name) != materialStorage.end())
 				throw std::exception(("a material with that name is already reserved: "s + name).c_str());
 
-			materialStorage[name] = nullptr;
+			materialStorage[name].reset(new Material(mask));
 		}
 
-		virtual MeshData& GetMesh(std::string& name) override {
+		MeshData& GetMesh(const std::string& name) {
 			if (meshStorage.find(name) == meshStorage.end())
 				throw std::exception(("no mesh with such name: "s + name).c_str());
 			return *(meshStorage[name]);
 		}
-		virtual Material& GetMaterial(std::string& name) override {
+		Material& GetMaterial(const std::string& name) {
 			if (materialStorage.find(name) == materialStorage.end())
 				throw std::exception(("no material with such name: "s + name).c_str());
 			return *(materialStorage[name]);
 		}
 
-		virtual void RegisterRenderShape(std::string& shapeName, std::string& meshName, std::string& matName) override {
+		void RegisterRenderShape(const std::string& shapeName, const std::string& meshName, const std::string& matName) {
 			if (renderShapes.find(shapeName) != renderShapes.end())
 				throw std::exception(("a shape with that name already exists: "s + shapeName).c_str()); 
 
 			renderShapes.emplace(shapeName, RenderShape(&GetMesh(meshName), &GetMaterial(matName)));
 		}
-		virtual const RenderShape& GetShape(std::string& shapeName) const override {
+		const RenderShape& GetShape(const std::string& shapeName) const {
 			if (renderShapes.find(shapeName) == renderShapes.end())
 				throw std::exception(("no shape with such name: "s + shapeName).c_str());
 

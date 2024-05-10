@@ -37,6 +37,19 @@ Classes and Interfaces:
 */
 
 /*
+rasterizer 
+	gets vertices from vertex buffer by groups of 3 and fills triangles using corresponging material
+
+vertex buffer 
+	holds vertices and links to materials corresponding to them
+
+transformer
+	takes render instances and fills vertex buffer with them while transforming them using vertex shader and clipping triangles
+
+*/
+
+
+/*
 	ResourceStorage storage;
 	MeshLoader meshLoader;
 
@@ -86,8 +99,43 @@ Classes and Interfaces:
 	}
 */
 
+/*
+shader example
+
+vertex shader
+
+VertexData for attributes
+RenderInstance for transform, material and uniforms
+Scene for camera and lights
+
+VertexData TransformAndProject(VertexData& vd, const RenderInstance& ri, const Scene* scene) {
+
+	const Vec4 homCoord = Vec4(vd.GetPos().x(), vd.GetPos().y(), vd.GetPos().z(), 1.0f);
+	const Vec4 worldSpace = homCoord * ri.GetWorldMatrix();
+	const Vec4 viewSpace = worldSpace * scene->GetCamera()->ViewMatrix();
+	const Vec4 clipSpace = viewSpace * scene->GetCamera()->ProjectionMatrix();
+	
+	const VertexData vdOut;
+
+	vdOut.SetPos(clipSpace);
+
+	return vdOut;
+}
+
+Vec4 GrayShade(const VertexData& prevd, const VertexData& postvd, const RenderInstance& ri, const Scene* scene) {
+	Vec3 localLightDir = vd.GetPos() - scene->GetLight().GetPos();
+}
+
+
+
+
+
+*/
+
+
 using namespace cpuRenderSimple;
 using namespace cpuRenderBase;
+
 
 class OLCDrawing final: public IDrawingFunctional {
 	olc::PixelGameEngine* eng;
@@ -97,11 +145,32 @@ public:
 		if (ieng == nullptr)
 			throw std::exception("trying to make OLC drawing with nullptr");
 	}
+	
+	void DrawPixel(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) override {
 
-	void DrawLine(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2) override {
-		eng->DrawLine(x1, y1, x2, y2, olc::WHITE);
 	}
+
+	void DrawLine(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint8_t r, uint8_t g, uint8_t b) override {
+		eng->DrawLine(x1, y1, x2, y2, olc::Pixel(r, g, b));
+	}
+
+	void FillTriangle(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t x3, uint32_t y3, uint8_t r, uint8_t g, uint8_t b) override{
+		eng->FillTriangle(x1, y1, x2, y2, x3, y3, olc::Pixel(r, g, b));
+	}
+
 };
+
+VertexData& SkipVert(VertexData& v_in) {
+	printf("vertex shader: received pos: (%f, %f, %f)\n", v_in.GetPos().x(), v_in.GetPos().y(), v_in.GetPos().z());
+	Vec4 v(v_in.GetPos().x(), v_in.GetPos().y(), v_in.GetPos().z(), 1.0f);
+	//Vec4 trans = v_in.WorldMat * v;
+
+	//printf("trans mat: (%f, %f, %f)\n", v_in.WorldMat[0][3], v_in.WorldMat[1][3], v_in.WorldMat[2][3]);
+
+	//printf("trans pos: (%f, %f, %f)\n", trans.x(), trans.y(), trans.z());
+
+	return v_in;
+}
 
 class MainC: public olc::PixelGameEngine {
 public:
@@ -109,37 +178,61 @@ public:
 	ResourceStorge storage;
 
 	MeshLoader meshLoader;
-	MeshData mesh;
+	
 
 	VertexBuffer vertexBuffer;
 	OLCDrawing drawer{ this };
-	Transformer<VertexBuffer> transformer = Transformer<VertexBuffer>(&storage, &vertexBuffer);
+	Transformer<VertexBuffer> transformer = Transformer<VertexBuffer>(&vertexBuffer);
 	CustomizableRasterizer<VertexBuffer, OLCDrawing> raster = CustomizableRasterizer<VertexBuffer, OLCDrawing>(&vertexBuffer, &drawer);
 
-	float xshift, yshift;
+	RenderInstance* ri = nullptr;
+
+	float xshift = 0, yshift = 0;
 	float cellSize = 10;
 	float timer = 0;
+	
+	MainC() {
+		printf("Constructing game\n");
+	}
 
 	bool OnUserCreate() override {
+		printf("user creating game\n");
 		try {
-			meshLoader.LoadMesh("testCube.glb", mesh);
+			
+			storage.ReserveMesh("triag");
+			storage.ReserveMaterial("simple", MeshData::ATTR_POS_MASK | MeshData::ATTR_NORMAL_MASK);
+
+			meshLoader.LoadMesh("testCube.glb", storage.GetMesh("triag"));
+
+			//storage.GetMesh("triag").SetAttr(MeshData::ATTR_POS, std::vector<float>{0.0f, 0.0f, 0.0f, 30.0f, 0.0f, 0.0f, 30.0f, 30.0f, 0.0f});
+
+			//meshLoader.LoadMesh("testCube.glb", mesh);
+		
+			storage.GetMaterial("simple").SetVertexShader(SkipVert);
+			storage.RegisterRenderShape("test", "triag", "simple");
+
 		}
 		catch (std::exception& exc) {
 			printf("exception during loading stage:\n\t");
 			printf("%s\n", exc.what());
+			throw exc;
 		}
 
-		mesh.PrintData();
+		//mesh.PrintData();
 
-		vertexBuffer.InsertVertex(Vec3(20, 20, 0));
-		vertexBuffer.InsertVertex(Vec3(50, 20, 0));
-		vertexBuffer.InsertVertex(Vec3(25, 70, 0));
+		try {
 
-
+			ri = new RenderInstance(&(storage.GetShape("test")));
+			ri->transform.pos = Vec3(20.0f, 20.0f, 0);
+		}
+		catch (std::exception& exc) {
+			printf("exception during instancing stage:\n\t");
+			printf("%s\n", exc.what());
+			throw exc;
+		}
+		
 		return true;
 	}
-	
-
 	bool OnUserUpdate(float dt) override {
 
 		Clear(olc::BLACK);
@@ -155,25 +248,48 @@ public:
 				int y = (int)(j + yshift) / cellSize;
 
 				if ( (x+y) % 2 == 0) {
-					this->GetDrawTarget()->SetPixel(i, j, olc::Pixel(25, 25, 25));
+					this->Draw(i, j, olc::Pixel(25, 25, 25));
 				}else
-					this->GetDrawTarget()->SetPixel(i, j, olc::Pixel(55, 55, 55));
+					this->Draw(i, j, olc::Pixel(55, 55, 55));
 			}
 		}
 
-		raster.DrawWires();
+		ri->transform.pos.x() += 7.0f * dt;
+		ri->transform.pos.y() += 12.0f * dt;
+		ri->transform.rot.z() += 22.0f * dt;
+
+		try {
+			transformer.ProcessRenderInstance(*ri);
+		}
+		catch (std::exception& exc) {
+			printf("Exception during transformation: \n\t%s", exc.what());
+		}
+
+		try {
+			raster.DrawWires();
+		}
+		catch (std::exception& exc) {
+			printf("Exception during rasterization: \n\t%s", exc.what());
+		}
+		printf("drew wires\n");
 		return true;
 	}
 
 };
+
+
 
 int main() {
 	
 
 	try {
 		MainC game;
+		printf("constructed game\n");
 		if (game.Construct(400, 400, 1, 1))
 			game.Start();
+
+
+		printf("game begun\n\t");
 	}
 	catch (std::exception& exc) {
 		printf("exception during preparation stage:\n\t");
@@ -183,6 +299,7 @@ int main() {
 	std::cout << sizeof(std::vector<float>) << std::endl;
 	std::cout << sizeof(std::vector<uint32_t>) << std::endl;
 
+	
 
 	return 0;
 }

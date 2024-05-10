@@ -64,7 +64,7 @@ namespace cpuRenderSimple {
 
     class MeshLoader final: IMeshLoader {
     public:
-        void LoadMesh(const char* fileName, MeshData& outMesh) const noexcept override  {
+        void LoadMesh(const char* fileName, MeshData& outMesh) const override  {
 
             //Function initially implemented by Wilhem Barbier(@wbrbr), with modifications by Tyler Bezera(@gamerfiend)
 
@@ -77,7 +77,7 @@ namespace cpuRenderSimple {
 
             if (fileData == nullptr) {
                 printf("failed to load file (%s) data", fileName);
-                throw std::exception("");
+                throw std::exception(("failed to load file (%s) data"s + fileName).c_str());
             }
 
             //wasn't working until i default-initialized cgltf_options
@@ -134,6 +134,8 @@ namespace cpuRenderSimple {
             std::vector<float> color;
             std::vector<uint32_t> indices;
 
+            uint8_t attrMask = 0ui64;
+
 #define LOAD_ATTRIBUTE(accesor, numComp, dataType, dstVec) \
     { \
         dstVec.resize((size_t)accesor->count*numComp);\
@@ -177,6 +179,7 @@ namespace cpuRenderSimple {
                             }
 
                             LOAD_ATTRIBUTE(attribute, 3, float, vertices);
+                            attrMask |= MeshData::ATTR_POS_MASK;
                             break;
 
                         case cgltf_attribute_type_normal:
@@ -185,8 +188,9 @@ namespace cpuRenderSimple {
                                 break;
                             }
 
-                            LOAD_ATTRIBUTE(attribute, 3, float, normal)
-                                break;
+                            LOAD_ATTRIBUTE(attribute, 3, float, normal);
+                            attrMask |= MeshData::ATTR_NORMAL_MASK;
+                            break;
 
                         case cgltf_attribute_type_tangent:
                             if (!CHECK_TYPES(attribute, cgltf_component_type_r_32f, cgltf_type_vec4)) {
@@ -195,6 +199,7 @@ namespace cpuRenderSimple {
                             }
 
                             LOAD_ATTRIBUTE(attribute, 4, float, tangent);
+                            attrMask |= MeshData::ATTR_TANGENT_MASK;
                             break;
 
                         case cgltf_attribute_type_texcoord:
@@ -203,8 +208,9 @@ namespace cpuRenderSimple {
                                 break;
                             }
 
-                            LOAD_ATTRIBUTE(attribute, 2, float, texcoord)
-                                break;
+                            LOAD_ATTRIBUTE(attribute, 2, float, texcoord);
+                            attrMask |= MeshData::ATTR_TEXCOORD_MASK;
+                            break;
 
                         case cgltf_attribute_type_color:
 
@@ -234,6 +240,8 @@ namespace cpuRenderSimple {
                             else
                                 printf("MODEL: [%s] Color attribute data format not supported", fileName);
 
+
+                            attrMask |= MeshData::ATTR_COLOR_MASK;
                             break;
                         }
                         // NOTE: Attributes related to animations are processed separately
@@ -266,11 +274,11 @@ namespace cpuRenderSimple {
                 }
             }
 
-            outMesh.SetList(MeshData::VERTEX_OFFSET, std::move(vertices));
-            outMesh.SetList(MeshData::NORMAL_OFFSET, std::move(normal));
-            outMesh.SetList(MeshData::TANGENT_OFFSET, std::move(tangent));
-            outMesh.SetList(MeshData::TEXCOORD_OFFSET, std::move(texcoord));
-            outMesh.SetList(MeshData::COLOR_OFFSET, std::move(color));
+            outMesh.SetAttr(MeshData::ATTR_POS, std::move(vertices));
+            outMesh.SetAttr(MeshData::ATTR_NORMAL, std::move(normal));
+            outMesh.SetAttr(MeshData::ATTR_TANGENT, std::move(tangent));
+            outMesh.SetAttr(MeshData::ATTR_TEXCOORD, std::move(texcoord));
+            outMesh.SetAttr(MeshData::ATTR_COLOR, std::move(color));
             outMesh.SetIndices(std::move(indices));
 
             delete[] fileData;
