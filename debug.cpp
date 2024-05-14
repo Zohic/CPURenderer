@@ -5,6 +5,8 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
 
+//#define CPUREN_DEBUG
+
 #include "ResourceStorage.h"
 #include "MeshLoader.h"
 
@@ -160,16 +162,45 @@ public:
 
 };
 
-VertexData& SkipVert(VertexData& v_in) {
-	printf("vertex shader: received pos: (%f, %f, %f)\n", v_in.GetPos().x(), v_in.GetPos().y(), v_in.GetPos().z());
-	Vec4 v(v_in.GetPos().x(), v_in.GetPos().y(), v_in.GetPos().z(), 1.0f);
-	//Vec4 trans = v_in.WorldMat * v;
+void SkipVert(VertexData& vertex, VertexShaderInput& vInput) {
+	DEBUGPRINT("vertex shader: received pos");
+	vertex.Print();
+	
+	vertex.SetPos(vInput.translationMatrix * vInput.rotationMatrix * vInput.scalingMatrix * vertex.GetPos());
+	DEBUGPRINT("vertex shader: transformed ");
+	vertex.Print();
+	vertex.SetPos(vInput.projectionMatrix * vertex.GetPos());
 
-	//printf("trans mat: (%f, %f, %f)\n", v_in.WorldMat[0][3], v_in.WorldMat[1][3], v_in.WorldMat[2][3]);
+	Vec4 p = vertex.GetPos();
 
-	//printf("trans pos: (%f, %f, %f)\n", trans.x(), trans.y(), trans.z());
+	Vec3 n = vertex.GetNormal();
 
-	return v_in;
+	n = vInput.rotationMatrix * n;
+
+
+	DEBUGPRINT("vertex shader: projected ");
+	vertex.Print();
+
+	p.x() /= p.w();
+	p.y() /= p.w();
+
+	DEBUGPRINT("vertex shader: clip space ");
+	printf("(%f, %f, %f, %f)", p.x(), p.y(), p.z(), p.w());
+
+	p.x() *= 200;
+	p.y() *= 200;
+
+	p.x() += 200;
+	p.y() += 200;
+
+	DEBUGPRINT("vertex shader: screen space ");
+	printf("(%f, %f, %f, %f)", p.x(), p.y(), p.z(), p.w());
+
+	vertex.SetPos(p);
+	vertex.SetNormal(n);
+
+	DEBUGPRINT("vertex shader: changed to");
+	vertex.Print();
 }
 
 class MainC: public olc::PixelGameEngine {
@@ -193,6 +224,7 @@ public:
 	
 	MainC() {
 		printf("Constructing game\n");
+		hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	}
 
 	bool OnUserCreate() override {
@@ -200,7 +232,7 @@ public:
 		try {
 			
 			storage.ReserveMesh("triag");
-			storage.ReserveMaterial("simple", MeshData::ATTR_POS_MASK | MeshData::ATTR_NORMAL_MASK);
+			Material& simpMat = storage.ReserveMaterial("simple", MeshData::ATTR_POS_MASK | MeshData::ATTR_NORMAL_MASK);
 
 			meshLoader.LoadMesh("testCube.glb", storage.GetMesh("triag"));
 
@@ -208,9 +240,18 @@ public:
 
 			//meshLoader.LoadMesh("testCube.glb", mesh);
 		
-			storage.GetMaterial("simple").SetVertexShader(SkipVert);
+			simpMat.SetVertexShader(SkipVert);
+			simpMat.SetUniform<float>("height", 3.14f);
+			simpMat.SetUniform<float>("width", 33.14f);
+
+			simpMat.SetUniform<Vec3*>("target", new Vec3(23, 33, 44));
+
+			simpMat.PrintUniforms();
+
 			storage.RegisterRenderShape("test", "triag", "simple");
 
+			transformer.SetCamera(90.0f, 1.0f, 0.01f, 200.0f);
+			
 		}
 		catch (std::exception& exc) {
 			printf("exception during loading stage:\n\t");
@@ -223,7 +264,8 @@ public:
 		try {
 
 			ri = new RenderInstance(&(storage.GetShape("test")));
-			ri->transform.pos = Vec3(20.0f, 20.0f, 0);
+			ri->transform.pos = Vec3(0, 0, -150.0f);
+			ri->transform.scale = Vec3(20.0f, 20.0f, 20.0f);
 		}
 		catch (std::exception& exc) {
 			printf("exception during instancing stage:\n\t");
@@ -254,24 +296,32 @@ public:
 			}
 		}
 
-		ri->transform.pos.x() += 7.0f * dt;
-		ri->transform.pos.y() += 12.0f * dt;
-		ri->transform.rot.z() += 22.0f * dt;
+		//ri->transform.pos.x() += 1.0f * dt;
+		//ri->transform.pos.y() += 1.0f * dt;
+
+		ri->transform.pos.z() = -130.0f - 30.0f*sinf(timer);
+		ri->transform.pos.x() = 100.0f * sinf(timer);
+		ri->transform.rot.z() += 3.14f * 0.33f * dt;
 
 		try {
+			vertexBuffer.ResetIterators();
 			transformer.ProcessRenderInstance(*ri);
 		}
 		catch (std::exception& exc) {
+			SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
 			printf("Exception during transformation: \n\t%s", exc.what());
+			SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN);
 		}
 
 		try {
 			raster.DrawWires();
 		}
 		catch (std::exception& exc) {
+			SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
 			printf("Exception during rasterization: \n\t%s", exc.what());
+			SetConsoleTextAttribute(hConsole, FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN);
 		}
-		printf("drew wires\n");
+		DEBUGPRINT("drew wires\n");
 		return true;
 	}
 
