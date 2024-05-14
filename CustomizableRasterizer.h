@@ -20,32 +20,44 @@ namespace cpuRenderSimple {
         }
 
         void DrawWires() override {
-            vertBuf->Clear();
+            vertBuf->ResetIterators();
 
-            printf("cleared buffer before drawing wires\n");
+            DEBUGPRINT("cleared buffer before drawing wires\n");
+            int tind = 0;
             while (!vertBuf->End()) {
                 const VertexData& v1 = vertBuf->GetVert();
                 const VertexData& v2 = vertBuf->GetVert();
                 const VertexData& v3 = vertBuf->GetVert();
 
+
+
+                printf("about to draw such triangle (%i):\n", tind);
+                tind++;
                 v1.Print();
                 v2.Print();
                 v3.Print();
 
                 const Material* mat = &(vertBuf->GetMaterial());
-                printf("all set: %i\n", mat);
+                DEBUGPRINT("all set: %i\n", mat);
                 const FragmentShader& shader = mat->GetFragmentShader();
 
+                /*float vdot = gmtl::dot(v1.GetNormal(), gmtl::makeNormal(v1.GetPos()));
+
+                if (vdot < 0)
+                    return;
+
                 
+                printf("the dot is: (%f)\n", vdot);*/
 
-                drawingTool->DrawLine(v1.GetPos().x() * 100, v1.GetPos().y() * 100,
-                    v2.GetPos().x() * 100, v2.GetPos().y() * 100, 255, 255, 255);
-                printf("drawn first\n");
-                drawingTool->DrawLine(v1.GetPos().x() * 100, v1.GetPos().y() * 100,
-                    v2.GetPos().x() * 100, v2.GetPos().y() * 100, 255, 255, 255);
+                drawingTool->DrawLine(v1.GetPos().x(), v1.GetPos().y(),
+                    v2.GetPos().x(), v2.GetPos().y(), 255, 255, 255);
+                DEBUGPRINT("drawn first\n");
 
-                drawingTool->DrawLine(v1.GetPos().x() * 100, v1.GetPos().y() * 100,
-                    v2.GetPos().x() * 100, v2.GetPos().y() * 100, 255, 255, 255);
+                drawingTool->DrawLine(v2.GetPos().x(), v2.GetPos().y(),
+                    v3.GetPos().x(), v3.GetPos().y(), 255, 255, 255);
+
+                drawingTool->DrawLine(v1.GetPos().x(), v1.GetPos().y(),
+                    v3.GetPos().x(), v3.GetPos().y(), 255, 255, 255);
 
             }
 

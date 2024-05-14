@@ -2,7 +2,17 @@
 #include <unordered_map>
 #include "gmtl/gmtl.h"
 #include <string>
+#include <variant>
 
+#ifdef CPUREN_DEBUG
+#define DEBUGPRINT(text, ...) printf(text, __VA_ARGS__);
+#endif // CPUREN_DEBUG
+
+#ifndef CPUREN_DEBUG
+#define DEBUGPRINT(text, ...) ;
+#endif // !CPUREN_DEBUG
+
+HANDLE  hConsole;
 
 
 namespace cpuRenderBase {
@@ -68,6 +78,7 @@ namespace cpuRenderBase {
 			old.attributeAvailabiltyMask = 0;
 		}
 		
+		//this works because Vec2, Vec3, Vec4 classes have only one field as array of floats
 		void SetAttr(size_t ind, std::vector<float>&& list) {
 			if (ind > ATTR_COLOR) {
 				throw std::exception("invalid list ind");
@@ -147,6 +158,13 @@ namespace cpuRenderBase {
 			return normal[indices[ind]];
 		}
 
+		const Vec4& GetTangent(size_t ind) const {
+			if (ind > indices.size())
+				throw std::exception("Getting tangent attribute out of bounds");
+			return tangent[indices[ind]];
+		}
+
+
 		size_t GetVertexCount() const {
 			return vertices.size() / 3;
 		}
@@ -158,30 +176,10 @@ namespace cpuRenderBase {
 		}
 
 	};
-	
 	class VertexData {
 		std::unique_ptr<float[]> attributes;
-
-		void SetPos(const Vec3& pos) {
-			attributes.get()[0] = pos.x();
-			attributes.get()[1] = pos.y();
-			attributes.get()[2] = pos.z();
-		}
-
-		void SetNormal(const Vec3& norm) {
-			attributes.get()[3] = norm.x();
-			attributes.get()[4] = norm.y();
-			attributes.get()[5] = norm.z();
-		}
-
-		void SetTangent(const Vec3& norm) {
-			attributes.get()[3] = norm.x();
-			attributes.get()[4] = norm.y();
-			attributes.get()[5] = norm.z();
-		}
-
-		inline size_t GetAttrFloatSize(bool attrMask[5]) {
-			return 3ui64 +
+		inline static size_t GetAttrFloatSize(bool attrMask[5]) {
+			return 4ui64 +
 				3ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_NORMAL]) +
 				4ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_TANGENT]) +
 				2ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_TEXCOORD]) +
@@ -204,41 +202,263 @@ namespace cpuRenderBase {
 			return *this;
 		}
 
-		const Vec3& GetPos() const {
+		void SetSize(bool attrList[5]) {
+			attributes.reset(new float[GetAttrFloatSize(attrList)]);
+		}
+		void SetFromMesh(const MeshData* const mesh, bool attrReqList[5], size_t vertInd) {
+			attributes.reset(new float[GetAttrFloatSize(attrReqList)]);
+
+			//DEBUGPRINT("have set size from mesh: %i\n", GetAttrFloatSize(attrReqList));
+
+			SetPos(mesh->GetPos(vertInd));
+			//DEBUGPRINT("have set pos from mesh: ");
+			Print();
+			if (attrReqList[1])
+				SetNormal(mesh->GetNormal(vertInd));
+
+		}
+
+		void SetPos(const Vec3& pos) {
+			attributes.get()[0] = pos.x();
+			attributes.get()[1] = pos.y();
+			attributes.get()[2] = pos.z();
+			attributes.get()[3] = 1.0f;
+		}
+		void SetPos(const Vec4& pos) {
+			attributes.get()[0] = pos.x();
+			attributes.get()[1] = pos.y();
+			attributes.get()[2] = pos.z();
+			attributes.get()[3] = pos.w();
+		}
+		void SetNormal(const Vec3& norm) {
+			attributes.get()[4] = norm.x();
+			attributes.get()[5] = norm.y();
+			attributes.get()[6] = norm.z();
+		}
+		void SetTangent(const Vec4& tang, bool attrMask[5]) {
+			const int offset = 4 + 3 * static_cast<unsigned int>(attrMask[1]);
+			attributes.get()[offset + 0] = tang.x();
+			attributes.get()[offset + 1] = tang.y();
+			attributes.get()[offset + 2] = tang.z();
+			attributes.get()[offset + 3] = tang.w();
+		}
+
+		const Vec4& GetPos() const {
 			if (!attributes.get())
 				throw std::exception("cannot GetPos(): vertex data is null\n");
-			return Vec3(attributes.get()[0], attributes.get()[1], attributes.get()[2]);
+			return Vec4(attributes.get()[0], attributes.get()[1], attributes.get()[2], attributes.get()[3]);
 		}
-
 		Vec3 GetNormal() const {
 
-			const float* const nums = (attributes.get() + 3);
+			const float* const nums = (attributes.get() + 4);
 			return Vec3(nums[0], nums[1], nums[2]);
 		}
-
 		Vec4 GetTangent(bool attrMask[5]) const {
 			const float* const nums = (attributes.get()
-				+ 3u
+				+ 4u
 				+ 3u * static_cast<unsigned int>(attrMask[1]));
 
 			return Vec4(nums[0], nums[1], nums[2], nums[3]);
 		}
 
-		void FillFromMesh(const MeshData* const mesh, bool attrReqList[5], size_t vertInd) {
-			attributes.reset(new float[GetAttrFloatSize(attrReqList)]);
-
-			SetPos(mesh->GetPos(vertInd));
-			if (attrReqList[1])
-				SetNormal(mesh->GetNormal(vertInd));
-		}
-
 		void Print() const {
-			printf("\tpos is: (%f, %f, %f)\n", GetPos().x(), GetPos().y(), GetPos().z());
+			printf("\tpos is: (%f, %f, %f, %f)\n", GetPos().x(), GetPos().y(), GetPos().z(), GetPos().w());
 		}
 
 	};
 
-	typedef VertexData& (*VertexShader)(VertexData& v_in);
+	
+	class Transform
+	{
+	private:
+
+	public:
+		Vec3 pos, rot, scale;
+		Transform() : pos(), rot(), scale(1.0f, 1.0f, 1.0f)
+		{
+
+		}
+		Transform(Vec3 p) : pos(p), rot(), scale(1.0f, 1.0f, 1.0f)
+		{
+
+		}
+		Transform(Vec3 p, Vec3 r) : pos(p), rot(r), scale(1.0f, 1.0f, 1.0f)
+		{
+
+		}
+		Transform(Vec3 p, Vec3 r, Vec3 s) : pos(p), rot(r), scale(s)
+		{
+
+		}
+
+		Mat4x4 GetTranslationMatrix() const {
+			Mat4x4 mTrans;
+			mTrans[0][3] = pos.x();
+			mTrans[1][3] = pos.y();
+			mTrans[2][3] = pos.z();
+			mTrans[3][3] = 1.0f;
+
+			return mTrans;
+		}
+
+		Mat4x4 GetScaleMatrix() const {
+			Mat4x4 mScale;
+
+			mScale[0][0] = scale.x();
+			mScale[1][1] = scale.y();
+			mScale[2][2] = scale.z();
+			mScale[3][3] = 1.0f;
+
+			return mScale;
+		}
+
+		Mat4x4 GetRotationMatrix() const {
+			Mat4x4 mRot;
+
+			mRot[0][0] = cosf(rot.z());
+			mRot[0][1] = sinf(rot.z());
+			mRot[1][0] = -sinf(rot.z());
+			mRot[1][1] = cosf(rot.z());
+
+			mRot[3][3] = 1.0f;
+
+			return mRot;
+		}
+	};
+
+	void PrintMatrix(Mat4x4& mat) {
+		printf("Mat4x4:\n");
+		printf("%f8, %f8, %f8, %f8\n", mat[0][0], mat[0][1], mat[0][2], mat[0][3]);
+		printf("%f8, %f8, %f8, %f8\n", mat[1][0], mat[1][1], mat[1][2], mat[1][3]);
+		printf("%f8, %f8, %f8, %f8\n", mat[2][0], mat[2][1], mat[2][2], mat[2][3]);
+		printf("%f8, %f8, %f8, %f8\n", mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
+	}
+
+	class Camera {
+		Mat4x4 projectionMatrix;
+		enum class CameraType{
+			ORTHOGRAPHIC,
+			PERSPECTIVE
+		};
+	public:
+		Transform transform;
+
+		Mat4x4 GetViewMatrix() const {
+
+		}
+		Mat4x4 GetProjectionMatrix() const {
+			return projectionMatrix;
+		}
+
+		void SetFrustum(float fovY, float aspectRatio, float front, float back)
+		{
+			DEBUGPRINT("SETTING FRUSTUM\n");
+			const float DEG2RAD = acos(-1.0f) / 180;
+
+			float tangent = tan(fovY / 2 * DEG2RAD);    // tangent of half fovY
+			float top = front * tangent;              // half height of near plane
+			float right = top * aspectRatio;          // half width of near plane
+
+			// params: left, right, bottom, top, near(front), far(back)
+			
+			projectionMatrix[0][0] = front / right;
+			projectionMatrix[1][1] = front / top;
+			projectionMatrix[2][2] = -(back + front) / (back - front);
+			projectionMatrix[3][2] = -1;
+			projectionMatrix[2][3] = -(2 * back * front) / (back - front);
+			projectionMatrix[3][3] = 0;
+		}
+
+	};
+	class LightSource {
+		Vec3 position;
+		Vec3 color;
+	};
+	
+	class Environment {
+		std::vector<Camera> cameras;
+		std::vector<LightSource> lights;
+	};
+
+	typedef std::variant<float, Vec2*, Vec3*, Vec4*, Mat4x4*> UniformValue;
+	class UnifromStorage {
+	protected:
+		std::unordered_map<std::string, UniformValue> uniforms;
+	public:
+		template<typename T>
+		const T GetUniform(std::string& name) const {
+			if (!std::holds_alternative<T>(uniforms[name]))
+				throw std::exception("no uniform of such type or name (GET)");
+
+			return std::get<T>(uniforms[name]);
+		}
+
+		template<typename T>
+		const T GetUniform(std::string&& name) const {
+			if (!std::holds_alternative<T>(uniforms[name]))
+				throw std::exception("no uniform of such type or name (GET)");
+
+			return std::get<T>(uniforms[name]);
+		}
+
+		template<typename T>
+		void SetUniform(std::string& name, T v) {
+			uniforms[name] = v;
+		}
+
+		template<typename T>
+		void SetUniform(std::string&& name, T v) {
+			uniforms[name] = v;
+		}
+
+		void PrintUniforms() {
+			printf("list of unifrom values:\n");
+			for (auto uni = uniforms.begin(); uni != uniforms.end(); uni++) {
+				const std::string& name = (*uni).first;
+
+				UniformValue value = (*uni).second;
+				
+				if (std::holds_alternative<float>(value)) {
+					printf("\t%s = %f\n", name, std::get<float>(value));
+				}
+				else if (std::holds_alternative<Vec2*>(value)) {
+					printf("\t%s = (%f, %f)\n", name, std::get<Vec2*>(value)->x(), std::get<Vec2*>(value)->y());
+				}
+				else if (std::holds_alternative<Vec3*>(value)) {
+					printf("\t%s = (%f, %f, %f)\n", name, std::get<Vec3*>(value)->x(), std::get<Vec3*>(value)->y(), std::get<Vec3*>(value)->z());
+				}
+				else if (std::holds_alternative<Vec4*>(value)) {
+					printf("\t%s = (%f, %f, %f, %f)\n", name, 
+						std::get<Vec4*>(value)->x(), std::get<Vec4*>(value)->y(), std::get<Vec4*>(value)->z(), std::get<Vec4*>(value)->w());
+				}
+				else if (std::holds_alternative<Mat4x4*>(value)) {
+					printf("\t%s = matrix4x4\n", name);
+				}
+
+				
+			}
+		}
+
+	};
+	class VertexShaderInput {
+	public:
+		Vec3 cameraPosition;
+		Vec3 cameraDirection;
+		Mat4x4 projectionMatrix;
+		Mat4x4 viewMatrix;
+
+		Mat4x4 translationMatrix;
+		Mat4x4 scalingMatrix;
+		Mat4x4 rotationMatrix;
+
+		UnifromStorage* uniforms;
+		std::vector<LightSource> lights;
+
+		bool availableAttrs[5];
+
+	};
+
+	typedef void (*VertexShader)(VertexData& v_in, VertexShaderInput& inp);
 	typedef Vec4 (*FragmentShader)(const VertexData& f_in);
 
 	const uint8_t atrr_offsets[5] = {
@@ -247,8 +467,7 @@ namespace cpuRenderBase {
 		MeshData::ATTR_TANGENT_MASK,
 		MeshData::ATTR_TEXCOORD_MASK,
 		MeshData::ATTR_COLOR_MASK };
-
-	class Material {
+	class Material: public UnifromStorage {
 
 		VertexShader vertexShader = nullptr;
 		FragmentShader fragmentShader = nullptr;
@@ -262,6 +481,7 @@ namespace cpuRenderBase {
 
 		Material& operator=(const Material& other) = delete;
 		Material& operator=(Material&& old) = delete;
+
 	public:
 
 #define AttrFromMask(attr) (attributeRequirementMask & atrr_offsets[attr]) >> attr
@@ -317,6 +537,10 @@ namespace cpuRenderBase {
 
 		uint8_t GetAttrMask() const {
 			return attributeRequirementMask;
+		}
+
+		const UnifromStorage* GetUniforms() const {
+			return this;
 		}
 
 		const bool* GetAttrList() const {
@@ -376,45 +600,6 @@ namespace cpuRenderBase {
 
 	};
 
-	class Transform
-	{
-	private:
-
-	public:
-		Vec3 pos, rot, scale;
-		Transform() : pos(), rot(), scale(1.0f, 1.0f, 1.0f)
-		{
-
-		}
-		Transform(Vec3 p) : pos(p), rot(), scale(1.0f, 1.0f, 1.0f)
-		{
-
-		}
-		Transform(Vec3 p, Vec3 r) : pos(p), rot(r), scale(1.0f, 1.0f, 1.0f)
-		{
-
-		}
-		Transform(Vec3 p, Vec3 r, Vec3 s) : pos(p), rot(r), scale(s)
-		{
-
-		}
-		Mat4x4 GetWorldMatrix() const {
-			Mat4x4 m1;
-			m1[0][3] = pos.x();
-			m1[1][3] = pos.y();
-			m1[2][3] = pos.z();
-			m1[3][3] = 1.0f;
-
-			Mat4x4 m2;
-
-			m2[0][0] = cosf(rot.z());
-			m2[0][1] = sinf(rot.z());
-			m2[1][0] = -sinf(rot.z());
-			m2[1][1] = cosf(rot.z());
-
-			return m1*m2;
-		}
-	};
 	
 	class RenderInstance {
 	public:
@@ -472,30 +657,13 @@ namespace cpuRenderBase {
 		virtual void LoadMesh(const char* fileName, MeshData& outMesh) const = 0;
 	};
 
-	class Camera {
-		Mat4x4 projectionMatrix;
-	public:
-		Transform transform;
 
-		Mat4x4 GetViewMatrix() const {
 
-		}
-		Mat4x4 GetProjectionMatrix() const {
-
-		}
-	};
-
-	class Environment {
-		Camera* camera;
-	
-	public:
-		
-
-	};
 
 	class Scene {
 		std::unordered_map<const Material*, std::vector<RenderInstance>> instancesByMaterial;
-		
+		Camera* camera;
+
 		RenderInstance& InsertRenderInstance(const RenderInstance& rendInst) {
 			const Material* matPtr = &(rendInst.GetShape()->GetMaterial());
 			instancesByMaterial[matPtr].push_back(rendInst);
@@ -518,17 +686,23 @@ namespace cpuRenderBase {
 		virtual const Material& GetMaterial() const = 0;
 		virtual bool End() const = 0;
 		virtual void Clear() = 0;
+		virtual void ResetIterators() = 0;
 	};
 	
 	template<typename VertexBufferType>
 	class TransformerBase {
 	private:
+		
 		TransformerBase() = delete;
+		//Vec3 viewerPosition;
+		//Vec3 viewDirection;
+		
 
 	protected:
 		VertexBufferType* buffer = nullptr;
-	public:
 		Camera cam;
+	public:
+		
 		
 		TransformerBase(VertexBufferType* buff) : buffer(buff) {
 			if (!buff)

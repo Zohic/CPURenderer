@@ -13,6 +13,11 @@ namespace cpuRenderSimple {
 
         }
 
+        void SetCamera(float fovY, float aspectRatio, float front, float back) {
+            DEBUGPRINT("SETTING CAMERA\n");
+            this->cam.SetFrustum(fovY, aspectRatio, front, back);
+        }
+
         void ProcessRenderInstance(const RenderInstance& renderInst) override {
             
                 const MeshData& mesh = renderInst.GetShape()->GetMesh();
@@ -20,21 +25,43 @@ namespace cpuRenderSimple {
                 const VertexShader& vertShader = (VertexShader)renderInst.GetShape()->GetMaterial().GetVertexShader();
 
                 VertexData vData;
+                VertexShaderInput vInput;
+                
+                
                 bool attrReqList[5];
                 memcpy(attrReqList, mat.GetAttrList(), 5ui64 * sizeof(bool));
+                
+
+                vInput.translationMatrix = renderInst.transform.GetTranslationMatrix();
+                vInput.rotationMatrix = renderInst.transform.GetRotationMatrix();
+                vInput.scalingMatrix = renderInst.transform.GetScaleMatrix();
+
+                memcpy(&(vInput.availableAttrs), mat.GetAttrList(), 5ui64 * sizeof(bool));
+
+                vInput.projectionMatrix = this->cam.GetProjectionMatrix();
+
+                PrintMatrix(vInput.projectionMatrix);
+
+                vData.SetSize(attrReqList);
 
                 for (int i = 0; i < mesh.GetTriangleCount(); i++) {
-                    printf("working on triangle: %i\n", i);
-                    vData.FillFromMesh(&mesh, attrReqList, i * 3);
-                    this->buffer->InsertVertex(vertShader(vData), &mat);
+                    DEBUGPRINT("working on triangle: %i\n", i);
 
-                    vData.FillFromMesh(&mesh, attrReqList, i * 3 + 1);
-                    this->buffer->InsertVertex(vertShader(vData), &mat);
+                    vData.SetFromMesh(&mesh, attrReqList, i * 3);
+                   // DEBUGPRINT("SET FROM MESH IN TRANSFOMER: ");
+                    vData.Print();
+                    vertShader(vData, vInput);
+                    this->buffer->InsertVertex(vData, &mat);
 
-                    vData.FillFromMesh(&mesh, attrReqList, i * 3 + 2);
-                    this->buffer->InsertVertex(vertShader(vData), &mat);
+                    vData.SetFromMesh(&mesh, attrReqList, i * 3 + 1);
+                    vertShader(vData, vInput);
+                    this->buffer->InsertVertex(vData, &mat);
+
+                    vData.SetFromMesh(&mesh, attrReqList, i * 3 + 2);
+                    vertShader(vData, vInput);
+                    this->buffer->InsertVertex(vData, &mat);
                 }
-                printf("done trans!\n");
+                DEBUGPRINT("done transformation!\n");
         }
     };
 

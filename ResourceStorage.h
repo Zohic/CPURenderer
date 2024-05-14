@@ -27,11 +27,12 @@ namespace cpuRenderSimple {
 
 			meshStorage[name].reset(new MeshData());
 		}
-		void ReserveMaterial(const std::string& name, uint8_t mask) {
+		Material& ReserveMaterial(const std::string& name, uint8_t mask) {
 			if (materialStorage.find(name) != materialStorage.end())
 				throw std::exception(("a material with that name is already reserved: "s + name).c_str());
 
 			materialStorage[name].reset(new Material(mask));
+			return *(materialStorage[name]);
 		}
 
 		MeshData& GetMesh(const std::string& name) {

@@ -21,14 +21,15 @@ namespace cpuRenderSimple {
         }
 
         void InsertVertex(VertexData& vert, const Material* const mat) override {
-
             if (iterationData[mat].first < iterationData[mat].second) {
                 //for some reason it is still required to use std::move even though vert is a rvalue refernce
-                printf("replacing vertex: \n");
-                vert.Print();
+                printf("replacing vertex (%i, %i): \n", iterationData[mat].first, iterationData[mat].second);
+                data[mat][iterationData[mat].first].Print();
                 data[mat][iterationData[mat].first] = std::move(vert);
-                printf("replaced vertex\n");
-                
+                data[mat][iterationData[mat].first].Print();
+                printf("replaced vertex (%i, %i)\n", iterationData[mat].first, iterationData[mat].second);
+                iterationData[mat].first++;
+
             }
             else {
                 printf("adding  vertex: \n");
@@ -36,11 +37,10 @@ namespace cpuRenderSimple {
                 data[mat].push_back(std::move(vert));
                 printf("added vertex\n");
             }
-                
-            
+
         }
 
-        void Clear() override {
+        void ResetIterators() override {
             for (const auto& [mat, vec] : data) {
                 iterationData[mat].first = 0;
                 iterationData[mat].second = vec.size();
@@ -50,8 +50,15 @@ namespace cpuRenderSimple {
             endOfBuffer = false;
         }
 
+        void Clear() override {
+            //this should not cause any slowing down when inserting since std::vector should save the capacity
+            for (auto& [mat, vec] : data) {
+                vec.clear();
+            }
+        }
+
         bool End() const override{
-            printf("eof: %i\n", endOfBuffer);
+            DEBUGPRINT("eof: %i\n", endOfBuffer);
             return endOfBuffer;
         }
 
@@ -59,13 +66,13 @@ namespace cpuRenderSimple {
             if (endOfBuffer)
                 throw std::exception("GetVert() when End() is true");
 
-            printf("get vert\n");
+            DEBUGPRINT("get vert\n");
 
             const VertexData& t = *vectorIterator;
             vectorIterator++;
 
-            printf("\tgot vert\n");
-            t.Print();
+            DEBUGPRINT("\tgot vert\n");
+            //t.Print();
 
             currentMat = (*dataIterator).first;
 
@@ -79,7 +86,7 @@ namespace cpuRenderSimple {
             }
 
 
-            printf("\treturnd vert\n");
+            DEBUGPRINT("\treturnd vert\n");
 
             return t;
         }
