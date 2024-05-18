@@ -134,6 +134,11 @@ Vec4 GrayShade(const VertexData& prevd, const VertexData& postvd, const RenderIn
 
 */
 
+#define PrintError(text, ...)  \
+SetConsoleTextAttribute(hConsole, FOREGROUND_RED);\
+printf(text, __VA_ARGS__);\
+SetConsoleTextAttribute(hConsole, FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN)\
+
 
 using namespace cpuRenderSimple;
 using namespace cpuRenderBase;
@@ -164,43 +169,45 @@ public:
 
 void SkipVert(VertexData& vertex, VertexShaderInput& vInput) {
 	DEBUGPRINT("vertex shader: received pos");
-	vertex.Print();
+	vertex.PrintPos();
 	
 	vertex.SetPos(vInput.translationMatrix * vInput.rotationMatrix * vInput.scalingMatrix * vertex.GetPos());
+	vertex.SetColor(vertex.GetPos(), vInput.availableAttrs);
+
 	DEBUGPRINT("vertex shader: transformed ");
-	vertex.Print();
+	vertex.PrintPos();
+
+	DEBUGPRINT("vertex shader: color ");
+	vertex.PrintColor(vInput.availableAttrs);
+
+	
 	vertex.SetPos(vInput.projectionMatrix * vertex.GetPos());
 
 	Vec4 p = vertex.GetPos();
-
+	
 	Vec3 n = vertex.GetNormal();
 
-	n = vInput.rotationMatrix * n;
+
+	DEBUGPRINT("vertex shader: normal ");
+	vertex.PrintNormal();
+
+	n = vInput.rotationMatrix * n; 
+	vertex.SetNormal(n);
+
+	DEBUGPRINT("vertex shader: rotated normal ");
+	vertex.PrintNormal();
 
 
 	DEBUGPRINT("vertex shader: projected ");
-	vertex.Print();
+	vertex.PrintPos();
 
-	p.x() /= p.w();
-	p.y() /= p.w();
+	
 
-	DEBUGPRINT("vertex shader: clip space ");
-	printf("(%f, %f, %f, %f)", p.x(), p.y(), p.z(), p.w());
+	//DEBUGPRINT("vertex shader: screen space ");
+	//DEBUGPRINT("(%f, %f, %f, %f)\n", p.x(), p.y(), p.z(), p.w());
 
-	p.x() *= 200;
-	p.y() *= 200;
-
-	p.x() += 200;
-	p.y() += 200;
-
-	DEBUGPRINT("vertex shader: screen space ");
-	printf("(%f, %f, %f, %f)", p.x(), p.y(), p.z(), p.w());
-
-	vertex.SetPos(p);
-	vertex.SetNormal(n);
-
-	DEBUGPRINT("vertex shader: changed to");
-	vertex.Print();
+	//vertex.SetPos(p);
+	
 }
 
 class MainC: public olc::PixelGameEngine {
@@ -232,18 +239,17 @@ public:
 		try {
 			
 			storage.ReserveMesh("triag");
-			Material& simpMat = storage.ReserveMaterial("simple", MeshData::ATTR_POS_MASK | MeshData::ATTR_NORMAL_MASK);
+			Material& simpMat = storage.ReserveMaterial("simple", ATTR_POS_MASK | ATTR_NORMAL_MASK | ATTR_COLOR_MASK);
 
 			meshLoader.LoadMesh("testCube.glb", storage.GetMesh("triag"));
 
-			//storage.GetMesh("triag").SetAttr(MeshData::ATTR_POS, std::vector<float>{0.0f, 0.0f, 0.0f, 30.0f, 0.0f, 0.0f, 30.0f, 30.0f, 0.0f});
+			//storage.GetMesh("triag").SetAttr(ATTR_POS, std::vector<float>{0.0f, 0.0f, 0.0f, 30.0f, 0.0f, 0.0f, 30.0f, 30.0f, 0.0f});
 
 			//meshLoader.LoadMesh("testCube.glb", mesh);
 		
 			simpMat.SetVertexShader(SkipVert);
 			simpMat.SetUniform<float>("height", 3.14f);
 			simpMat.SetUniform<float>("width", 33.14f);
-
 			simpMat.SetUniform<Vec3*>("target", new Vec3(23, 33, 44));
 
 			simpMat.PrintUniforms();
@@ -252,10 +258,13 @@ public:
 
 			transformer.SetCamera(90.0f, 1.0f, 0.01f, 200.0f);
 			
+
+			transformer.SetCulling(Transformer<VertexBuffer>::CullType::FRONT);
+			
+			raster.SetViewPort(0, 0, ScreenWidth(), ScreenHeight());
 		}
 		catch (std::exception& exc) {
-			printf("exception during loading stage:\n\t");
-			printf("%s\n", exc.what());
+			PrintError("exception during loading stage: \n\t%s\n", exc.what());
 			throw exc;
 		}
 
@@ -264,19 +273,18 @@ public:
 		try {
 
 			ri = new RenderInstance(&(storage.GetShape("test")));
-			ri->transform.pos = Vec3(0, 0, -150.0f);
+			ri->transform.pos = Vec3(0, 0, -100.0f);
 			ri->transform.scale = Vec3(20.0f, 20.0f, 20.0f);
 		}
 		catch (std::exception& exc) {
-			printf("exception during instancing stage:\n\t");
-			printf("%s\n", exc.what());
+			PrintError("exception during instancing stage \n\t%s:\n", exc.what());
 			throw exc;
 		}
 		
 		return true;
 	}
+	int cltmp = 0;
 	bool OnUserUpdate(float dt) override {
-
 		Clear(olc::BLACK);
 		xshift += (15.0f * dt + 54.0f*sinf(timer*0.5f)*dt);
 		yshift += 10 * dt;
@@ -299,29 +307,37 @@ public:
 		//ri->transform.pos.x() += 1.0f * dt;
 		//ri->transform.pos.y() += 1.0f * dt;
 
-		ri->transform.pos.z() = -130.0f - 30.0f*sinf(timer);
-		ri->transform.pos.x() = 100.0f * sinf(timer);
-		ri->transform.rot.z() += 3.14f * 0.33f * dt;
+		ri->transform.pos.z() = 130.0f * sinf(timer * 1.2f) - 200.0f;
+		ri->transform.pos.x() = 140.0f * cosf(timer * 3.5f);
+		ri->transform.pos.y() = 30.0f * sinf(timer * 2.0f) * sinf(timer * 5.0f);
+
+		ri->transform.rot.y() += 3.14f * 0.33f * dt;
+		ri->transform.rot.z() += 3.14f * 1.33f * dt;
+
+		vertToDraw = ((int)(timer / 0.1f)) % 9;
+
+		if (GetKey(olc::SPACE).bPressed)
+			transformer.SetCulling((Transformer<VertexBuffer>::CullType)((++cltmp)%3));
+
+		this->DrawString(20, 20, std::to_string(vertexBuffer.GetVertexCount()));
 
 		try {
-			vertexBuffer.ResetIterators();
+			vertexBuffer.ResetIterators(true);
 			transformer.ProcessRenderInstance(*ri);
 		}
 		catch (std::exception& exc) {
-			SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
-			printf("Exception during transformation: \n\t%s", exc.what());
-			SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN);
+			PrintError("Exception during transformation: \n\t%s\n", exc.what());
 		}
+
 
 		try {
 			raster.DrawWires();
+			DEBUGPRINT("drew wires\n");
 		}
 		catch (std::exception& exc) {
-			SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
-			printf("Exception during rasterization: \n\t%s", exc.what());
-			SetConsoleTextAttribute(hConsole, FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN);
+			PrintError("Exception during rasterization: \n\t%s\n", exc.what());
 		}
-		DEBUGPRINT("drew wires\n");
+		
 		return true;
 	}
 

@@ -179,7 +179,7 @@ namespace cpuRenderSimple {
                             }
 
                             LOAD_ATTRIBUTE(attribute, 3, float, vertices);
-                            attrMask |= MeshData::ATTR_POS_MASK;
+                            attrMask |= ATTR_POS_MASK;
                             break;
 
                         case cgltf_attribute_type_normal:
@@ -189,7 +189,7 @@ namespace cpuRenderSimple {
                             }
 
                             LOAD_ATTRIBUTE(attribute, 3, float, normal);
-                            attrMask |= MeshData::ATTR_NORMAL_MASK;
+                            attrMask |= ATTR_NORMAL_MASK;
                             break;
 
                         case cgltf_attribute_type_tangent:
@@ -199,7 +199,7 @@ namespace cpuRenderSimple {
                             }
 
                             LOAD_ATTRIBUTE(attribute, 4, float, tangent);
-                            attrMask |= MeshData::ATTR_TANGENT_MASK;
+                            attrMask |= ATTR_TANGENT_MASK;
                             break;
 
                         case cgltf_attribute_type_texcoord:
@@ -209,7 +209,7 @@ namespace cpuRenderSimple {
                             }
 
                             LOAD_ATTRIBUTE(attribute, 2, float, texcoord);
-                            attrMask |= MeshData::ATTR_TEXCOORD_MASK;
+                            attrMask |= ATTR_TEXCOORD_MASK;
                             break;
 
                         case cgltf_attribute_type_color:
@@ -241,7 +241,7 @@ namespace cpuRenderSimple {
                                 printf("MODEL: [%s] Color attribute data format not supported", fileName);
 
 
-                            attrMask |= MeshData::ATTR_COLOR_MASK;
+                            attrMask |= ATTR_COLOR_MASK;
                             break;
                         }
                         // NOTE: Attributes related to animations are processed separately
@@ -274,12 +274,19 @@ namespace cpuRenderSimple {
                 }
             }
 
-            outMesh.SetAttr(MeshData::ATTR_POS, std::move(vertices));
-            outMesh.SetAttr(MeshData::ATTR_NORMAL, std::move(normal));
-            outMesh.SetAttr(MeshData::ATTR_TANGENT, std::move(tangent));
-            outMesh.SetAttr(MeshData::ATTR_TEXCOORD, std::move(texcoord));
-            outMesh.SetAttr(MeshData::ATTR_COLOR, std::move(color));
+            outMesh.SetAttr(ATTR_POS, std::move(vertices));
+            outMesh.SetAttr(ATTR_NORMAL, std::move(normal));
+            outMesh.SetAttr(ATTR_TANGENT, std::move(tangent));
+            outMesh.SetAttr(ATTR_TEXCOORD, std::move(texcoord));
+            outMesh.SetAttr(ATTR_COLOR, std::move(color));
+
             outMesh.SetIndices(std::move(indices));
+
+
+            printf("mesh has been loaded, attributes are: \n");
+            
+            outMesh.SetAttrAvailability(attrMask);
+            outMesh.PrintAttributes();
 
             delete[] fileData;
             cgltf_free(data);

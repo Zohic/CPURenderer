@@ -23,28 +23,33 @@ namespace cpuRenderSimple {
         void InsertVertex(VertexData& vert, const Material* const mat) override {
             if (iterationData[mat].first < iterationData[mat].second) {
                 //for some reason it is still required to use std::move even though vert is a rvalue refernce
-                printf("replacing vertex (%i, %i): \n", iterationData[mat].first, iterationData[mat].second);
-                data[mat][iterationData[mat].first].Print();
+                DEBUGPRINT("replacing vertex (%i, %i): \n", iterationData[mat].first, iterationData[mat].second);
+                data[mat][iterationData[mat].first].PrintPos();
                 data[mat][iterationData[mat].first] = std::move(vert);
-                data[mat][iterationData[mat].first].Print();
-                printf("replaced vertex (%i, %i)\n", iterationData[mat].first, iterationData[mat].second);
+                data[mat][iterationData[mat].first].PrintPos();
+                DEBUGPRINT("replaced vertex (%i, %i)\n", iterationData[mat].first, iterationData[mat].second);
                 iterationData[mat].first++;
 
             }
             else {
-                printf("adding  vertex: \n");
-                vert.Print();
+                DEBUGPRINT("adding  vertex: (%i, %i): \n", iterationData[mat].first, iterationData[mat].second);
+                vert.PrintPos();
                 data[mat].push_back(std::move(vert));
-                printf("added vertex\n");
+                iterationData[mat].first++;
+                iterationData[mat].second = iterationData[mat].first;
+                DEBUGPRINT("added vertex (%i, %i): \n", iterationData[mat].first, iterationData[mat].second);
             }
 
         }
 
-        void ResetIterators() override {
-            for (const auto& [mat, vec] : data) {
-                iterationData[mat].first = 0;
-                iterationData[mat].second = vec.size();
-            }
+        void ResetIterators(bool recount) override {
+            if (recount)
+                for (const auto& [mat, vec] : data) {
+                    iterationData[mat].first = 0;
+                    iterationData[mat].second = vec.size();
+                
+                }
+
             dataIterator = data.cbegin();
             vectorIterator = (*dataIterator).second.cbegin();
             endOfBuffer = false;
@@ -64,19 +69,35 @@ namespace cpuRenderSimple {
 
         const VertexData& GetVert() override{
             if (endOfBuffer)
-                throw std::exception("GetVert() when End() is true");
+                throw std::exception("trying to GetVert() when End() is true");
 
             DEBUGPRINT("get vert\n");
 
             const VertexData& t = *vectorIterator;
             vectorIterator++;
 
+            currentMat = (*dataIterator).first;
+            DEBUGPRINT("\tcurrent vert: %i\n", iterationData[currentMat].first);
+            
+            
+
             DEBUGPRINT("\tgot vert\n");
             //t.Print();
 
-            currentMat = (*dataIterator).first;
+            
 
-            if (vectorIterator == (*dataIterator).second.cend()) {
+            
+
+            /*if (vectorIterator == (*dataIterator).second.cend()) {
+                dataIterator++;
+
+                if (dataIterator != data.cend())
+                    vectorIterator = (*dataIterator).second.cbegin();
+                else
+                    endOfBuffer = true;
+            }*/
+            iterationData[currentMat].first -= 1;
+            if (iterationData[currentMat].first == 0) {
                 dataIterator++;
 
                 if (dataIterator != data.cend())
@@ -84,7 +105,7 @@ namespace cpuRenderSimple {
                 else
                     endOfBuffer = true;
             }
-
+                
 
             DEBUGPRINT("\treturnd vert\n");
 
@@ -96,7 +117,11 @@ namespace cpuRenderSimple {
         }
 
         size_t GetVertexCount() const {
-            return 23;
+            size_t num = 0;
+            for (const auto& [mat, val] : iterationData) {
+                num += val.second;
+            }
+            return num;
         }
 
     };

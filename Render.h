@@ -2,26 +2,145 @@
 #include <unordered_map>
 #include "gmtl/gmtl.h"
 #include <string>
+#include <array>
 #include <variant>
 
 #ifdef CPUREN_DEBUG
 #define DEBUGPRINT(text, ...) printf(text, __VA_ARGS__);
-#endif // CPUREN_DEBUG
-
-#ifndef CPUREN_DEBUG
+#else
 #define DEBUGPRINT(text, ...) ;
 #endif // !CPUREN_DEBUG
 
 HANDLE  hConsole;
 
 
+
 namespace cpuRenderBase {
+
 	using Vec2 = gmtl::Vec2f;
 	using Vec3 = gmtl::Vec3f;
 	using Vec4 = gmtl::Vec4f;
 	using Mat4x4 = gmtl::Matrix44f;
 
-	class MeshData {
+	constexpr size_t ATTR_POS = 0Ui64;
+	constexpr size_t ATTR_NORMAL = 1Ui64;
+	constexpr size_t ATTR_TANGENT = 2Ui64;
+	constexpr size_t ATTR_TEXCOORD = 3Ui64;
+	constexpr size_t ATTR_COLOR = 4Ui64;
+
+
+	constexpr size_t ATTRIBUTES_NUM = 5Ui64;
+
+	constexpr uint8_t ATTR_POS_MASK = 1Ui8;
+	constexpr uint8_t ATTR_NORMAL_MASK = 2Ui8;
+	constexpr uint8_t ATTR_TANGENT_MASK = 4Ui8;
+	constexpr uint8_t ATTR_TEXCOORD_MASK = 8Ui8;
+	constexpr uint8_t ATTR_COLOR_MASK = 16Ui8;
+
+	constexpr uint8_t atrr_offsets[5] = {
+	ATTR_POS_MASK,
+	ATTR_NORMAL_MASK,
+	ATTR_TANGENT_MASK,
+	ATTR_TEXCOORD_MASK,
+	ATTR_COLOR_MASK };
+
+	class AttributeAvailability {
+	protected:
+		uint8_t attributeMask = 0ui8;
+		std::array<bool, 5> attributeList = { false, false, false, false, false };
+	public:
+		AttributeAvailability() {
+			
+		}
+
+
+#define AttrFromMask(attr) (bool)((attributeMask & atrr_offsets[attr]) >> attr)
+
+		AttributeAvailability(uint8_t mask) : attributeMask(mask) {
+
+			printf("hehe: %i", attributeMask == mask);
+
+			if (!(AttrFromMask(ATTR_POS)))
+				throw std::exception("attribute mask has no POSITION");
+
+			attributeList[ATTR_POS] = true;
+			attributeList[ATTR_NORMAL] = AttrFromMask(ATTR_NORMAL);
+			attributeList[ATTR_TANGENT] = AttrFromMask(ATTR_TANGENT);
+			attributeList[ATTR_TEXCOORD] = AttrFromMask(ATTR_TEXCOORD);
+			attributeList[ATTR_COLOR] = AttrFromMask(ATTR_COLOR);
+		}
+		
+
+		AttributeAvailability(const bool* list) {
+
+			if (!list[ATTR_POS])
+				throw std::exception("attribute list has no POSITION");
+
+			attributeMask =
+				atrr_offsets[ATTR_POS]                            |
+				atrr_offsets[ATTR_NORMAL]   * list[ATTR_NORMAL]   |
+				atrr_offsets[ATTR_TANGENT]  * list[ATTR_TANGENT]  |
+				atrr_offsets[ATTR_TEXCOORD] * list[ATTR_TEXCOORD] |
+				atrr_offsets[ATTR_COLOR]    * list[ATTR_COLOR];
+
+			memcpy(attributeList.data(), list, 5ui64 * sizeof(bool));
+		}
+
+		void SetAttrAvailability(uint8_t mask) {
+
+			attributeMask = mask;
+
+			if (!(AttrFromMask(ATTR_POS)))
+				throw std::exception("attribute mask has no POSITION");
+
+			attributeList[ATTR_POS] = true;
+			attributeList[ATTR_NORMAL] = AttrFromMask(ATTR_NORMAL);
+			attributeList[ATTR_TANGENT] = AttrFromMask(ATTR_TANGENT);
+			attributeList[ATTR_TEXCOORD] = AttrFromMask(ATTR_TEXCOORD);
+			attributeList[ATTR_COLOR] = AttrFromMask(ATTR_COLOR);
+		}
+
+		void SetAttrAvailability(const bool* list) {
+			if (!list[ATTR_POS])
+				throw std::exception("attribute mask has no POSITION");
+
+			attributeMask =
+				atrr_offsets[ATTR_POS] |
+				atrr_offsets[ATTR_NORMAL] * list[ATTR_NORMAL] |
+				atrr_offsets[ATTR_TANGENT] * list[ATTR_TANGENT] |
+				atrr_offsets[ATTR_TEXCOORD] * list[ATTR_TEXCOORD] |
+				atrr_offsets[ATTR_COLOR] * list[ATTR_COLOR];
+
+			memcpy(attributeList.data(), list, 5ui64 * sizeof(bool));
+		}
+
+		uint8_t GetAttrMask() const {
+			return attributeMask;
+		}
+		const bool* GetAttrList() const {
+			return attributeList.data();
+		}
+		bool HasAttr(size_t attr) const {
+			return attributeList[attr];
+		}
+		size_t AttributesSize() const {
+			return 4ui64 +
+				HasAttr(ATTR_NORMAL) * 3ui64 +
+				HasAttr(ATTR_TANGENT) * 4ui64 +
+				HasAttr(ATTR_TEXCOORD) * 2ui64 +
+				HasAttr(ATTR_COLOR) * 4ui64;
+		}
+
+		void PrintAttributes() const {
+			const char* const attrnames[5] = { "POSITION", "NORMAL", "TANGENT", "TEXCOORD", "COLOR" };
+			for (int i = 0; i < ATTRIBUTES_NUM; i++)
+				printf("%s: %s", attrnames[i], HasAttr(i) ? "YES\n" : "NO\n");
+		}
+
+#undef AttrFromMask(attr)
+	};
+
+	class MeshData: public AttributeAvailability {
 		std::vector<Vec3> vertices;
 		std::vector<Vec3> normal;
 		std::vector<Vec4> tangent;
@@ -30,24 +149,10 @@ namespace cpuRenderBase {
 
 		std::vector<uint32_t> indices;
 
-		uint8_t attributeAvailabiltyMask;
 		uint32_t triangleCount;
 
 	public:
-		static constexpr size_t ATTR_POS = 0Ui64;
-		static constexpr size_t ATTR_NORMAL = 1Ui64;
-		static constexpr size_t ATTR_TANGENT = 2Ui64;
-		static constexpr size_t ATTR_TEXCOORD = 3Ui64;
-		static constexpr size_t ATTR_COLOR = 4Ui64;
-
-		static constexpr uint8_t ATTR_POS_MASK = 1Ui8;
-		static constexpr uint8_t ATTR_NORMAL_MASK = 2Ui8;
-		static constexpr uint8_t ATTR_TANGENT_MASK = 4Ui8;
-		static constexpr uint8_t ATTR_TEXCOORD_MASK = 8Ui8;
-		static constexpr uint8_t ATTR_COLOR_MASK = 16Ui8;
-
-
-		MeshData() : vertices(), normal(), tangent(), texcoord(), color(), indices(), attributeAvailabiltyMask(0), triangleCount(0) {
+		MeshData() : vertices(), normal(), tangent(), texcoord(), color(), indices(), triangleCount(0) {
 
 		}
 
@@ -59,11 +164,10 @@ namespace cpuRenderBase {
 			texcoord(std::move(old.texcoord)),
 			color(std::move(old.color)),
 			indices(std::move(old.indices)) {
-
-			attributeAvailabiltyMask = old.attributeAvailabiltyMask;
-			triangleCount = old.triangleCount;
-
-			old.attributeAvailabiltyMask = 0;
+			
+			attributeList = old.attributeList;
+			attributeMask = old.attributeMask;
+			
 			old.triangleCount = 0;
 		}
 		MeshData& operator=(MeshData&& old) noexcept {
@@ -74,8 +178,9 @@ namespace cpuRenderBase {
 			color = std::move(old.color);
 			indices = std::move(old.indices);
 
-			attributeAvailabiltyMask = old.attributeAvailabiltyMask;
-			old.attributeAvailabiltyMask = 0;
+			attributeList = old.attributeList;
+			attributeMask = old.attributeMask;
+			
 		}
 		
 		//this works because Vec2, Vec3, Vec4 classes have only one field as array of floats
@@ -84,7 +189,10 @@ namespace cpuRenderBase {
 				throw std::exception("invalid list ind");
 			}
 		
-			*(((std::vector<float>*)(this)) + ind) = list;
+			const char* const offsetByAttributes = ((char*)this) + offsetof(MeshData, vertices);
+			std::vector<float>* const firstList = (std::vector<float>*)(offsetByAttributes);
+
+			*(firstList + ind) = list;
 		}
 		void SetIndices(std::vector<uint32_t>&& list) {
 			indices = list;
@@ -137,10 +245,6 @@ namespace cpuRenderBase {
 			triangleCount = cnt;
 		}
 
-		void SetAttributeAvailability(uint8_t mask) {
-			attributeAvailabiltyMask = mask;
-		}
-
 		/// <summary>
 		///
 		/// </summary>
@@ -151,17 +255,25 @@ namespace cpuRenderBase {
 				throw std::exception("Getting pos attribute out of bounds");
 			return vertices[indices[ind]];
 		}
-
 		const Vec3& GetNormal(size_t ind) const {
 			if (ind > indices.size())
 				throw std::exception("Getting normal attribute out of bounds");
 			return normal[indices[ind]];
 		}
-
 		const Vec4& GetTangent(size_t ind) const {
 			if (ind > indices.size())
 				throw std::exception("Getting tangent attribute out of bounds");
 			return tangent[indices[ind]];
+		}
+		const Vec2& GetTexcoord(size_t ind) const {
+			if (ind > indices.size())
+				throw std::exception("Getting texcoord attribute out of bounds");
+			return texcoord[indices[ind]];
+		}
+		const Vec4& GetColor(size_t ind) const {
+			if (ind > indices.size())
+				throw std::exception("Getting color attribute out of bounds");
+			return color[indices[ind]];
 		}
 
 
@@ -171,19 +283,16 @@ namespace cpuRenderBase {
 		uint32_t GetTriangleCount() const {
 			return triangleCount;
 		}
-		uint8_t GetAttrMask() const {
-			return attributeAvailabiltyMask;
-		}
 
 	};
 	class VertexData {
 		std::unique_ptr<float[]> attributes;
-		inline static size_t GetAttrFloatSize(bool attrMask[5]) {
+		inline static size_t GetAttrFloatSize(const bool* attrMask) {
 			return 4ui64 +
-				3ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_NORMAL]) +
-				4ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_TANGENT]) +
-				2ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_TEXCOORD]) +
-				4ui64 * static_cast<unsigned int>(attrMask[MeshData::ATTR_COLOR]);
+				3ui64 * static_cast<unsigned int>(attrMask[ATTR_NORMAL]) +
+				4ui64 * static_cast<unsigned int>(attrMask[ATTR_TANGENT]) +
+				2ui64 * static_cast<unsigned int>(attrMask[ATTR_TEXCOORD]) +
+				4ui64 * static_cast<unsigned int>(attrMask[ATTR_COLOR]);
 
 		}
 
@@ -202,19 +311,32 @@ namespace cpuRenderBase {
 			return *this;
 		}
 
-		void SetSize(bool attrList[5]) {
+		void Init(const bool* attrList) {
+			DEBUGPRINT("size is set to %i\n: ", GetAttrFloatSize(attrList));
 			attributes.reset(new float[GetAttrFloatSize(attrList)]);
 		}
-		void SetFromMesh(const MeshData* const mesh, bool attrReqList[5], size_t vertInd) {
-			attributes.reset(new float[GetAttrFloatSize(attrReqList)]);
+		void SetFromMesh(const MeshData* const mesh, const bool* reqList, size_t vertInd) {
+			//attributes.reset(new float[GetAttrFloatSize(attrReqList)]);
 
-			//DEBUGPRINT("have set size from mesh: %i\n", GetAttrFloatSize(attrReqList));
-
+			DEBUGPRINT("size of required mesh: %i\n", GetAttrFloatSize(reqList));
+			
 			SetPos(mesh->GetPos(vertInd));
+
+		
 			//DEBUGPRINT("have set pos from mesh: ");
-			Print();
-			if (attrReqList[1])
+			//Print();
+			
+			if (mesh->HasAttr(ATTR_NORMAL) && reqList[ATTR_NORMAL])
 				SetNormal(mesh->GetNormal(vertInd));
+
+			if (mesh->HasAttr(ATTR_TANGENT) && reqList[ATTR_TANGENT])
+				SetTangent(mesh->GetTangent(vertInd), reqList);
+
+			if (mesh->HasAttr(ATTR_TEXCOORD) && reqList[ATTR_TEXCOORD])
+				SetTexcoord(mesh->GetTexcoord(vertInd), reqList);
+
+			if (mesh->HasAttr(ATTR_COLOR) && reqList[ATTR_COLOR])
+				SetColor(mesh->GetColor(vertInd), reqList);
 
 		}
 
@@ -225,49 +347,122 @@ namespace cpuRenderBase {
 			attributes.get()[3] = 1.0f;
 		}
 		void SetPos(const Vec4& pos) {
+			if (!attributes.get())
+				throw std::exception("cannot SetPos(): vertex data is null\n");
 			attributes.get()[0] = pos.x();
 			attributes.get()[1] = pos.y();
 			attributes.get()[2] = pos.z();
 			attributes.get()[3] = pos.w();
 		}
 		void SetNormal(const Vec3& norm) {
+			if (!attributes.get())
+				throw std::exception("cannot SetNormal(): vertex data is null\n");
 			attributes.get()[4] = norm.x();
 			attributes.get()[5] = norm.y();
 			attributes.get()[6] = norm.z();
 		}
-		void SetTangent(const Vec4& tang, bool attrMask[5]) {
-			const int offset = 4 + 3 * static_cast<unsigned int>(attrMask[1]);
+		void SetTangent(const Vec4& tang, const bool* attrMask) {
+			if (!attributes.get())
+				throw std::exception("cannot SetTangent(): vertex data is null\n");
+			const int offset = 
+				4 + 
+				3 * static_cast<unsigned int>(attrMask[ATTR_NORMAL]);
 			attributes.get()[offset + 0] = tang.x();
 			attributes.get()[offset + 1] = tang.y();
 			attributes.get()[offset + 2] = tang.z();
 			attributes.get()[offset + 3] = tang.w();
 		}
+		void SetTexcoord(const Vec2& texcrd, const bool* attrMask) {
+			if (!attributes.get())
+				throw std::exception("cannot SetTexcoord(): vertex data is null\n");
+			const int offset =
+				4 +
+				3 * static_cast<unsigned int>(attrMask[ATTR_NORMAL]) +
+				4 * static_cast<unsigned int>(attrMask[ATTR_TANGENT]);
+
+			attributes.get()[offset + 0] = texcrd.x();
+			attributes.get()[offset + 1] = texcrd.y();
+		}
+		void SetColor(const Vec4& clr, const bool* attrMask) {
+			if (!attributes.get())
+				throw std::exception("cannot SetColor(): vertex data is null\n");
+			const int offset =
+				4 +
+				3 * static_cast<unsigned int>(attrMask[ATTR_NORMAL]) +
+				4 * static_cast<unsigned int>(attrMask[ATTR_TANGENT]) +
+				2 * static_cast<unsigned int>(attrMask[ATTR_TEXCOORD]);
+
+			attributes.get()[offset + 0] = clr.x();
+			attributes.get()[offset + 1] = clr.y();
+			attributes.get()[offset + 2] = clr.z();
+			attributes.get()[offset + 3] = clr.w();
+		}
 
 		const Vec4& GetPos() const {
 			if (!attributes.get())
 				throw std::exception("cannot GetPos(): vertex data is null\n");
-			return Vec4(attributes.get()[0], attributes.get()[1], attributes.get()[2], attributes.get()[3]);
+			return *((Vec4*)attributes.get());
+			//return Vec4(attributes.get()[0], attributes.get()[1], attributes.get()[2], attributes.get()[3]);
 		}
-		Vec3 GetNormal() const {
-
+		const Vec3& GetNormal() const {
+			if (!attributes.get())
+				throw std::exception("cannot GetNormal(): vertex data is null\n");
 			const float* const nums = (attributes.get() + 4);
-			return Vec3(nums[0], nums[1], nums[2]);
+			return *((Vec3*)nums);
 		}
-		Vec4 GetTangent(bool attrMask[5]) const {
+		const Vec4& GetTangent(const bool* attrMask) const {
+			if (!attributes.get())
+				throw std::exception("cannot GetTangent(): vertex data is null\n");
+
 			const float* const nums = (attributes.get()
 				+ 4u
-				+ 3u * static_cast<unsigned int>(attrMask[1]));
+				+ 3u * static_cast<unsigned int>(attrMask[ATTR_NORMAL]));
 
-			return Vec4(nums[0], nums[1], nums[2], nums[3]);
+			return *((Vec4*)nums);
+		}
+		const Vec2& GetTexcoord(const bool* attrMask) const {
+			if (!attributes.get())
+				throw std::exception("cannot GetTexcoord(): vertex data is null\n");
+			const float* const nums = (attributes.get()
+				+ 4u
+				+ 3u * static_cast<unsigned int>(attrMask[ATTR_NORMAL])
+				+ 4u * static_cast<unsigned int>(attrMask[ATTR_TANGENT]));
+
+			return *((Vec2*)nums);
+		}
+		const Vec4& GetColor(const bool* attrMask) const {
+			if (!attributes.get())
+				throw std::exception("cannot GetColor(): vertex data is null\n");
+			const float* const nums = (attributes.get()
+				+ 4u
+				+ 3u * static_cast<unsigned int>(attrMask[ATTR_NORMAL])
+				+ 4u * static_cast<unsigned int>(attrMask[ATTR_TANGENT])
+				+ 2u * static_cast<unsigned int>(attrMask[ATTR_TEXCOORD]));
+
+			return *((Vec4*)nums);
 		}
 
-		void Print() const {
+		void PrintPos() const {
+#ifdef CPUREN_DEBUG
 			printf("\tpos is: (%f, %f, %f, %f)\n", GetPos().x(), GetPos().y(), GetPos().z(), GetPos().w());
+#endif //CPUREN_DEBUG
 		}
-
+		void PrintNormal() const {
+#ifdef CPUREN_DEBUG
+			printf("\tnormal is: (%f, %f, %f)\n", GetNormal().x(), GetNormal().y(), GetNormal().z());
+#endif //CPUREN_DEBUG
+		}
+		void PrintColor(const bool* attrMask) const {
+#ifdef CPUREN_DEBUG
+			const Vec4& clr = GetColor(attrMask);
+			printf("\tcolor is: (%f, %f, %f, %f)\n", clr.x(), clr.y(), clr.z(), clr.w());
+#endif //CPUREN_DEBUG
+		}
 	};
 
 	
+
+
 	class Transform
 	{
 	private:
@@ -315,23 +510,55 @@ namespace cpuRenderBase {
 		Mat4x4 GetRotationMatrix() const {
 			Mat4x4 mRot;
 
-			mRot[0][0] = cosf(rot.z());
-			mRot[0][1] = sinf(rot.z());
-			mRot[1][0] = -sinf(rot.z());
-			mRot[1][1] = cosf(rot.z());
+			// rotation angle about X-axis (pitch)
+			
+			float sx = sin(rot.x());
+			float cx = cos(rot.x());
 
-			mRot[3][3] = 1.0f;
+			// rotation angle about Y-axis (yaw)
+			float sy = sin(rot.y());
+			float cy = cos(rot.y());
+
+			// rotation angle about Z-axis (roll)
+			float sz = sin(rot.z());
+			float cz = cos(rot.z());
+
+			// determine left axis
+			mRot[0][0] = cy * cz;
+			mRot[1][0] = sx * sy * cz + cx * sz;
+			mRot[2][0] = -cx * sy * cz + sx * sz;
+
+			// determine up axis
+			mRot[0][1] = -cy * sz;
+			mRot[1][1] = -sx * sy * sz + cx * cz;
+			mRot[2][1] = cx * sy * sz + sx * cz;
+
+			// determine forward axis
+			mRot[0][2] = sy;
+			mRot[1][2] = -sx * cy;
+			mRot[2][2] = cx * cy;
+
+			mRot[3][0] = 0;
+			mRot[3][1] = 0; 
+			mRot[3][2] = 0; 
+			mRot[3][3] = 1; 
+
+			mRot[0][3] = 0;
+			mRot[1][3] = 0;
+			mRot[2][3] = 0;
 
 			return mRot;
 		}
 	};
 
 	void PrintMatrix(Mat4x4& mat) {
+#ifdef CPUREN_DEBUG
 		printf("Mat4x4:\n");
 		printf("%f8, %f8, %f8, %f8\n", mat[0][0], mat[0][1], mat[0][2], mat[0][3]);
 		printf("%f8, %f8, %f8, %f8\n", mat[1][0], mat[1][1], mat[1][2], mat[1][3]);
 		printf("%f8, %f8, %f8, %f8\n", mat[2][0], mat[2][1], mat[2][2], mat[2][3]);
 		printf("%f8, %f8, %f8, %f8\n", mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
+#endif // CPUREN_DEBUG
 	}
 
 	class Camera {
@@ -381,7 +608,7 @@ namespace cpuRenderBase {
 	};
 
 	typedef std::variant<float, Vec2*, Vec3*, Vec4*, Mat4x4*> UniformValue;
-	class UnifromStorage {
+	class UniformStorage {
 	protected:
 		std::unordered_map<std::string, UniformValue> uniforms;
 	public:
@@ -443,37 +670,34 @@ namespace cpuRenderBase {
 	class VertexShaderInput {
 	public:
 		Vec3 cameraPosition;
-		Vec3 cameraDirection;
 		Mat4x4 projectionMatrix;
+		//80
+		Vec3 cameraDirection;
 		Mat4x4 viewMatrix;
+		//80
+		
 
 		Mat4x4 translationMatrix;
 		Mat4x4 scalingMatrix;
-		Mat4x4 rotationMatrix;
-
-		UnifromStorage* uniforms;
 		std::vector<LightSource> lights;
+		//160
 
-		bool availableAttrs[5];
+		Mat4x4 rotationMatrix;
+		UniformStorage* uniforms = nullptr;
+		//76
+
+		const bool* availableAttrs = nullptr;
 
 	};
-
+	
 	typedef void (*VertexShader)(VertexData& v_in, VertexShaderInput& inp);
 	typedef Vec4 (*FragmentShader)(const VertexData& f_in);
 
-	const uint8_t atrr_offsets[5] = {
-		MeshData::ATTR_POS_MASK,
-		MeshData::ATTR_NORMAL_MASK,
-		MeshData::ATTR_TANGENT_MASK,
-		MeshData::ATTR_TEXCOORD_MASK,
-		MeshData::ATTR_COLOR_MASK };
-	class Material: public UnifromStorage {
+
+	class Material: public UniformStorage, public AttributeAvailability {
 
 		VertexShader vertexShader = nullptr;
 		FragmentShader fragmentShader = nullptr;
-
-		uint8_t attributeRequirementMask;
-		bool attributeRequirementList[5];
 
 		Material() = delete;
 		Material(const Material& other) = delete;
@@ -484,33 +708,13 @@ namespace cpuRenderBase {
 
 	public:
 
-#define AttrFromMask(attr) (attributeRequirementMask & atrr_offsets[attr]) >> attr
-		Material(uint8_t mask): attributeRequirementMask(mask){
 
-			if (!(AttrFromMask(MeshData::ATTR_POS)))
-				throw std::exception("material has no POSITION requirement");
+		Material(uint8_t mask): UniformStorage(), AttributeAvailability(mask) {
 
-			attributeRequirementList[0] = true;
-			attributeRequirementList[1] = AttrFromMask(MeshData::ATTR_NORMAL);
-			attributeRequirementList[2] = AttrFromMask(MeshData::ATTR_TANGENT);
-			attributeRequirementList[3] = AttrFromMask(MeshData::ATTR_TEXCOORD);
-			attributeRequirementList[4] = AttrFromMask(MeshData::ATTR_COLOR);
 		}
-#undef AttrFromMask(attr)
 
-		Material(bool list[5]): attributeRequirementList() {
+		Material(const bool* list): UniformStorage(), AttributeAvailability(list) {
 
-			if (!list[0])
-				throw std::exception("material has no POSITION requirement");
-
-			attributeRequirementMask =
-				1ui8 |
-				atrr_offsets[1] * list[1] |
-				atrr_offsets[2] * list[2] |
-				atrr_offsets[3] * list[3] |
-				atrr_offsets[4] * list[4];
-
-			memcpy(attributeRequirementList, list, 5ui64 * sizeof(bool));
 		}
 
 		void SetVertexShader(const VertexShader vs) {
@@ -535,40 +739,25 @@ namespace cpuRenderBase {
 			return fragmentShader;
 		}
 
-		uint8_t GetAttrMask() const {
-			return attributeRequirementMask;
-		}
-
-		const UnifromStorage* GetUniforms() const {
+		
+		const UniformStorage* GetUniforms() const {
 			return this;
 		}
 
-		const bool* GetAttrList() const {
-			return attributeRequirementList;
-		}
-		uint8_t HasAttr(size_t attr) const {
-			return attributeRequirementList[attr];
-		}
-		size_t AttributesSize() const {
-			return 3ui64 +
-				HasAttr(MeshData::ATTR_NORMAL) * 3ui64 +
-				HasAttr(MeshData::ATTR_TANGENT) * 4ui64 +
-				HasAttr(MeshData::ATTR_TEXCOORD) * 2ui64 +
-				HasAttr(MeshData::ATTR_COLOR) * 4ui64;
-		}
+		
 	};
 	
 	class RenderShape {
 	private:
-		MeshData* mesh;
-		Material* material;
+		const MeshData* mesh;
+		const Material* material;
 		RenderShape() = delete;
 	public:
-		RenderShape(MeshData* imesh, Material* imat): mesh(imesh), material(imat) {
+		RenderShape(const MeshData* imesh, const Material* imat): mesh(imesh), material(imat) {
 
 		}
 		void SetMesh(const MeshData* imesh) {
-			mesh = const_cast<MeshData*>(imesh);
+			mesh = imesh;
 		}
 		void SetMaterial(const Material* mat) {
 			const uint8_t& req = mat->GetAttrMask();
@@ -576,11 +765,10 @@ namespace cpuRenderBase {
 
 			bool hasAttr = (req & avl) == req;
 
-			if (hasAttr) {
-				material = const_cast<Material*>(mat);
-			}
-			else
-				throw std::exception("the material reqires more attributes that the mesh has");
+			material = mat;
+
+			if (!hasAttr)
+				printf("WARNING WHEN CREATING SHAPE: the material reqires more attributes that the mesh has\n");
 		}
 
 		void SetUniform() {
@@ -589,10 +777,12 @@ namespace cpuRenderBase {
 
 		const MeshData& GetMesh() const {
 			if (!mesh)
-				throw std::exception("trying to access mesh that is not existent");
+				throw std::exception("trying to access mesh from shape that is not existent");
 			return *mesh;
 		}
 		const Material& GetMaterial() const {
+			if (!material)
+				throw std::exception("trying to access material from shape that is not existent");
 			return *material;
 		}
 	
@@ -686,7 +876,7 @@ namespace cpuRenderBase {
 		virtual const Material& GetMaterial() const = 0;
 		virtual bool End() const = 0;
 		virtual void Clear() = 0;
-		virtual void ResetIterators() = 0;
+		virtual void ResetIterators(bool recount) = 0;
 	};
 	
 	template<typename VertexBufferType>
@@ -724,6 +914,10 @@ namespace cpuRenderBase {
 	protected:
 		VertexBufferType* vertexBuffer;
 		DrawingFunctional* drawingTool;
+
+		Vec2 viewportPos;
+		Vec2 viewportSize;
+
 	public:
 		
 		RasterizerBase(VertexBufferType* ivertBuffer, DrawingFunctional* idrawingTool) : vertexBuffer(ivertBuffer), drawingTool(idrawingTool) {
@@ -733,6 +927,10 @@ namespace cpuRenderBase {
 				throw std::exception("drawing tool pointer is null");
 		}
 
+		virtual void SetViewPort(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+			viewportPos.set(x, y);
+			viewportSize.set(w, h);
+		}
 		virtual void DrawWires() = 0;
 		virtual void RenderTriangles() = 0;
 	};
