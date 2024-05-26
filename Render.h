@@ -197,48 +197,26 @@ namespace cpuRenderBase {
 		void SetIndices(std::vector<uint32_t>&& list) {
 			indices = list;
 		}
-		void PrintData() const noexcept {
-			for (int i = 0; i < vertices.size(); i += 3) {
-				printf("vertex %i: (%f, %f, %f)\n", i / 3 + 1, vertices[i], vertices[i + 1], vertices[i + 2]);
+		void PrintData() const {
+			
+			for (int i = 0; i < vertices.size(); i += 1) {
+				printf("vertex %i: (%.6f, %.6f, %.6f)\n", i + 1, vertices[i][0], vertices[i][1], vertices[i][2]);
 			}
-
-			for (int i = 0; i < normal.size(); i += 3) {
-				printf("normal %i: (%f, %f, %f)\n", i / 3 + 1, normal[i], normal[i + 1], normal[i + 2]);
+			for (int i = 0; i < normal.size(); i += 1) {
+				printf("normal %i: (%.6f, %.6f, %.6f)\n", i + 1, normal[i][0], normal[i][1], normal[i][2]);
 			}
-
-			for (int i = 0; i < tangent.size(); i += 4) {
-				printf("tangent %i: (%f, %f, %f, %f)\n", i / 4 + 1, tangent[i], tangent[i + 1], tangent[i + 2], tangent[i + 3]);
+			for (int i = 0; i < texcoord.size(); i += 1) {
+				printf("texcoord %i: (%f, %f)\n", i + 1, texcoord[i][0], texcoord[i][1]);
 			}
-
-			for (int i = 0; i < texcoord.size(); i += 2) {
-				printf("texcoord %i: (%f, %f)\n", i / 2 + 1, texcoord[i], texcoord[i + 1]);
-			}
-
-			for (int i = 0; i < color.size(); i += 4) {
-				printf("color %i: (%f, %f, %f, %f)\n", i / 4 + 1, color[i], color[i + 1], color[i + 2], color[i + 3]);
+			for (int i = 0; i < color.size(); i += 1) {
+				printf("color %i: (%.6f, %.6f, %.6f, %.6f)\n", i + 1, color[i][0], color[i][1], color[i][2], color[i][3]);
 			}
 
 			for (int i = 0; i < indices.size(); i += 3) {
 				printf("index %i: (%i, %i, %i)\n", i / 3 + 1, indices[i], indices[i + 1], indices[i + 2]);
 			}
-		}
 
-		void EmplaceAttributesOfTriangle(size_t tri, unsigned int attr, float* dst) const {
-			const size_t triag = tri * 3;
-			const std::vector<float>* const list = (((std::vector<float>*)(this)) + attr);
-
-			*(dst + 0) = (*list)[indices[triag]];
-			*(dst + 1) = (*list)[indices[triag] + 1];
-			*(dst + 2) = (*list)[indices[triag] + 2];
-
-			*(dst + 3) = (*list)[indices[triag + 1] ];
-			*(dst + 4) = (*list)[indices[triag + 1] + 1];
-			*(dst + 5) = (*list)[indices[triag + 1] + 2];
-
-			*(dst + 6) = (*list)[indices[triag + 2]];
-			*(dst + 7) = (*list)[indices[triag + 2] + 1];
-			*(dst + 8) = (*list)[indices[triag + 2] + 2];
-
+			
 		}
 
 		void SetTriangleCount(uint32_t cnt) {
@@ -276,7 +254,6 @@ namespace cpuRenderBase {
 			return color[indices[ind]];
 		}
 
-
 		size_t GetVertexCount() const {
 			return vertices.size() / 3;
 		}
@@ -285,6 +262,7 @@ namespace cpuRenderBase {
 		}
 
 	};
+	
 	class VertexData {
 		std::unique_ptr<float[]> attributes;
 		inline static size_t GetAttrFloatSize(const bool* attrMask) {
@@ -460,13 +438,15 @@ namespace cpuRenderBase {
 		}
 	};
 
-	
+	class Mesh {
+		std::vector<MeshData> meshes;
+	};
 
 
 	class Transform
 	{
 	private:
-
+		Transform* parent = nullptr;
 	public:
 		Vec3 pos, rot, scale;
 		Transform() : pos(), rot(), scale(1.0f, 1.0f, 1.0f)
@@ -486,6 +466,12 @@ namespace cpuRenderBase {
 
 		}
 
+		void SetParent(Transform* const par) {
+			if (par == nullptr)
+				throw std::exception("setting nullptr as a parent for the transform");
+			parent = par;
+		}
+		
 		Mat4x4 GetTranslationMatrix() const {
 			Mat4x4 mTrans;
 			mTrans[0][3] = pos.x();
@@ -548,6 +534,24 @@ namespace cpuRenderBase {
 			mRot[2][3] = 0;
 
 			return mRot;
+		}
+	
+		void TransformWorldMatrix(Mat4x4& res) const {
+			res = GetTranslationMatrix() * GetRotationMatrix() * GetScaleMatrix() * res;
+		}
+
+		Mat4x4 GetWorldMatrix() const {
+			Mat4x4 resultMat;
+			Transform* trans = parent;
+
+			TransformWorldMatrix(resultMat);
+
+			while (trans != nullptr) {
+				trans->TransformWorldMatrix(resultMat);
+				trans = trans->parent;
+			}
+
+			return resultMat;
 		}
 	};
 
@@ -679,12 +683,11 @@ namespace cpuRenderBase {
 
 		Mat4x4 translationMatrix;
 		Mat4x4 scalingMatrix;
-		std::vector<LightSource> lights;
-		//160
-
 		Mat4x4 rotationMatrix;
+		Mat4x4 worldMatrix;
+
+		std::vector<LightSource> lights;
 		UniformStorage* uniforms = nullptr;
-		//76
 
 		const bool* availableAttrs = nullptr;
 
@@ -692,7 +695,6 @@ namespace cpuRenderBase {
 	
 	typedef void (*VertexShader)(VertexData& v_in, VertexShaderInput& inp);
 	typedef Vec4 (*FragmentShader)(const VertexData& f_in);
-
 
 	class Material: public UniformStorage, public AttributeAvailability {
 
@@ -789,7 +791,6 @@ namespace cpuRenderBase {
 		
 
 	};
-
 	
 	class RenderInstance {
 	public:
@@ -820,7 +821,6 @@ namespace cpuRenderBase {
 			return shape;
 		}
 	};
-
 	
 	/*class FragmentBuffer {
 		uint32_t width, height;

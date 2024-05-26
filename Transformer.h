@@ -41,6 +41,8 @@ namespace cpuRenderSimple {
                 vInput.translationMatrix = renderInst.transform.GetTranslationMatrix();
                 vInput.rotationMatrix = renderInst.transform.GetRotationMatrix();
                 vInput.scalingMatrix = renderInst.transform.GetScaleMatrix();
+                vInput.worldMatrix = renderInst.transform.GetWorldMatrix();
+
 
                 //TODO: undertand what the fuck
                 /*for (int i = 0; i < 5; i++) {

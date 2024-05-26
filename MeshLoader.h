@@ -124,6 +124,19 @@ namespace cpuRenderSimple {
             for (unsigned int i = 0; i < data->meshes_count; i++)
                 primitivesCount += (int)data->meshes[i].primitives_count;
 
+            //TODO transformation based on nodes form files
+            /*
+            for (int i = 0; i < data->nodes_count; i++) {
+                if (data->nodes[i].mesh != nullptr) {
+                    printf("mesh %i: %s\n", i, data->nodes[i].mesh->name);
+                    printf("\thas translation: %s\n", data->nodes[i].has_translation ? "yes" : "no");
+                    printf("\thas rotation: %s\n", data->nodes[i].has_rotation ? "yes" : "no");
+                    printf("\thas scale: %s\n", data->nodes[i].has_scale ? "yes" : "no");
+                    printf("\thas matrix: %s\n", data->nodes[i].has_matrix ? "yes" : "no");
+                }
+            }*/
+
+
             printf("MODEL: Meshes: %i\n", (unsigned int)data->meshes_count);
             printf("MODEL: Primitive count: %i\n", primitivesCount);
 
@@ -135,17 +148,24 @@ namespace cpuRenderSimple {
             std::vector<uint32_t> indices;
 
             uint8_t attrMask = 0ui64;
+            size_t prevSize = 0;
 
 #define LOAD_ATTRIBUTE(accesor, numComp, dataType, dstVec) \
     { \
-        dstVec.resize((size_t)accesor->count*numComp);\
+        prevSize = dstVec.size();\
+        dstVec.resize(prevSize + (size_t)accesor->count*numComp);\
+        /*printf("\tsize: %u -> %u\n", prevSize, dstVec.size());*/\
         int n = 0; \
-        dataType *buffer = (dataType *)accesor->buffer_view->buffer->data + accesor->buffer_view->offset/sizeof(dataType) + accesor->offset/sizeof(dataType); \
+        dataType *buffer = (dataType*)((char*)accesor->buffer_view->buffer->data + accesor->buffer_view->offset) + accesor->offset/sizeof(dataType);\
+        /*printf("\tbuffer data is at %x\n", (dataType *)accesor->buffer_view->buffer->data);*/\
+        /*printf("\tbuffer offset is %u bytes of %u bytes (=%u numbers)\n", accesor->buffer_view->offset, sizeof(dataType), accesor->buffer_view->offset/sizeof(dataType));*/\
+        /*printf("\taccesor offset is %u bytes of %u bytes (=%u)\n", accesor->offset, sizeof(dataType), accesor->offset/sizeof(dataType));*/\
         for (unsigned int k = 0; k < accesor->count; k++) \
         {\
             for (int l = 0; l < numComp; l++) \
             {\
-                dstVec[k*numComp + l] = buffer[n + l];\
+                /*printf("setting %i value with %i valuse\n", prevSize + k*numComp + l, n + l);*/\
+                dstVec[prevSize + k*numComp + l] = buffer[n + l];\
             }\
             n += (int)(accesor->stride/sizeof(dataType));\
         }\
@@ -154,29 +174,41 @@ namespace cpuRenderSimple {
 #define CHECK_TYPES(attr, comp_type, vec_type)\
         (attr->component_type ==comp_type) && (attr->type == vec_type)
 
-
             // Load meshes data
             //----------------------------------------------------------------------------------------------------
             for (unsigned int i = 0, meshIndex = 0; i < data->meshes_count; i++)
             {
                 // NOTE: meshIndex accumulates primitives
+                printf("loading mesh: %i\n", i+1);
+                printf("\tname is %s\n", data->meshes[i].name);
+                printf("\tit has %u attributes\n", data->meshes[i].primitives[0].attributes_count);
+                printf("\tit has %u indices (%u triangles)\n", data->meshes[i].primitives[0].indices->count, data->meshes[i].primitives[0].indices->count/3);
+                //printf("\tit has %u primitives\n", data->meshes[i].primitives_count);
+                
+                //printf("\tit is sparse %s\n", data->meshes[i].primitives[0].indices->is_sparse ? "yes" : "no");
 
                 for (unsigned int p = 0; p < data->meshes[i].primitives_count; p++)
                 {
+                    size_t prevAttributeSize = vertices.size()/3;
+
+                    printf("\tloading primitive: %i\n", p);
                     if (data->meshes[i].primitives[p].type != cgltf_primitive_type_triangles) continue;
 
                     for (unsigned int j = 0; j < data->meshes[i].primitives[p].attributes_count; j++)
                     {
                         cgltf_accessor* attribute = data->meshes[i].primitives[p].attributes[j].data;
-
+                        
                         switch (data->meshes[i].primitives[p].attributes[j].type) {
-
+                            
                         case cgltf_attribute_type_position:
                             // WARNING: SPECS: POSITION accessor MUST have its min and max properties defined.
+                            
                             if (!CHECK_TYPES(attribute, cgltf_component_type_r_32f, cgltf_type_vec3)) {
                                 printf("MODEL: [%s] Vertices attribute data format not supported, use vec3 float", fileName);
                                 break;
                             }
+
+                            printf("loading pos:\n");
 
                             LOAD_ATTRIBUTE(attribute, 3, float, vertices);
                             attrMask |= ATTR_POS_MASK;
@@ -187,7 +219,7 @@ namespace cpuRenderSimple {
                                 printf("MODEL: [%s] Normal attribute data format not supported, use vec3 float", fileName);
                                 break;
                             }
-
+                            printf("loading normal:\n");
                             LOAD_ATTRIBUTE(attribute, 3, float, normal);
                             attrMask |= ATTR_NORMAL_MASK;
                             break;
@@ -197,7 +229,7 @@ namespace cpuRenderSimple {
                                 printf("MODEL: [%s] Tangent attribute data format not supported, use vec4 float", fileName);
                                 break;
                             }
-
+                            printf("loading tangent:\n");
                             LOAD_ATTRIBUTE(attribute, 4, float, tangent);
                             attrMask |= ATTR_TANGENT_MASK;
                             break;
@@ -207,7 +239,7 @@ namespace cpuRenderSimple {
                                 printf("MODEL: [%s] Texcoords attribute data format not supported, use vec2 float", fileName);
                                 break;
                             }
-
+                            printf("loading texcoord:\n");
                             LOAD_ATTRIBUTE(attribute, 2, float, texcoord);
                             attrMask |= ATTR_TEXCOORD_MASK;
                             break;
@@ -219,6 +251,7 @@ namespace cpuRenderSimple {
                             if (CHECK_TYPES(attribute, cgltf_component_type_r_8u, cgltf_type_vec4)) {
 
                                 std::vector<unsigned char> temp;
+                                printf("loading color:\n");
                                 LOAD_ATTRIBUTE(attribute, 4, unsigned char, temp);
 
                                 color.resize((int)attribute->count * 4);
@@ -228,13 +261,14 @@ namespace cpuRenderSimple {
                             else if (CHECK_TYPES(attribute, cgltf_component_type_r_16u, cgltf_type_vec4)) {
 
                                 std::vector<short> temp;
+                                printf("loading color:\n");
                                 LOAD_ATTRIBUTE(attribute, 4, unsigned short, temp);
 
                                 color.resize((int)attribute->count * 4);
                                 for (unsigned int c = 0; c < attribute->count * 4; c++) color[c] = (float)temp[c] / 65535.0f;
                             }
                             else if (CHECK_TYPES(attribute, cgltf_component_type_r_32f, cgltf_type_vec4)) {
-
+                                printf("loading color:\n");
                                 LOAD_ATTRIBUTE(attribute, 4, float, color);
                             }
                             else
@@ -247,26 +281,45 @@ namespace cpuRenderSimple {
                         // NOTE: Attributes related to animations are processed separately
                     }
 
+                    
 
                     if (data->meshes[i].primitives[p].indices != NULL)
                     {
                         cgltf_accessor* attribute = data->meshes[i].primitives[p].indices;
+                        
+                        size_t prevSize = indices.size();
+                        indices.resize(prevSize + attribute->count);
 
-                        outMesh.SetTriangleCount((unsigned int)attribute->count / 3);
 
-                        if (attribute->component_type == cgltf_component_type_r_16u) {
-                            indices.resize(attribute->count);
+                        size_t res = cgltf_accessor_unpack_indices(attribute, indices.data() + prevSize, sizeof(uint32_t), attribute->count);
+
+                        if (res == 0)
+                            throw std::exception("failed loading indices");
+
+
+                        for (int i = prevSize; i < indices.size(); i++) {
+                            indices[i] += prevAttributeSize;
+                        }
+
+                        /*if (attribute->component_type == cgltf_component_type_r_16u) {
+                            //indices.resize(attribute->count);
+                            printf("loading indecies, u16:\n");
+
                             LOAD_ATTRIBUTE(attribute, 1, unsigned short, indices);
+                            printf("prev size for ind is %u\n", prevSizeForIndex);
+                            
                         }
                         else if (attribute->component_type == cgltf_component_type_r_32u) {
-                            indices.resize(attribute->count);
+                            //indices.resize(attribute->count);
+                            printf("loading indecies, u32:\n");
                             LOAD_ATTRIBUTE(attribute, 1, unsigned int, indices);
                         }
                         else
-                            printf("MODEL: [%s] Indices data format not supported, use u32", fileName);
+                            printf("MODEL: [%s] Indices data format not supported, use u32", fileName);*/
                     }
                     else
                         printf("MODEL: [%s] No indices data!", fileName);
+
                     //model.meshes[meshIndex].triangleCount = model.meshes[meshIndex].vertexCount / 3;    // Unindexed mesh
 
                     meshIndex++;       // Move to next mesh
@@ -279,7 +332,7 @@ namespace cpuRenderSimple {
             outMesh.SetAttr(ATTR_TANGENT, std::move(tangent));
             outMesh.SetAttr(ATTR_TEXCOORD, std::move(texcoord));
             outMesh.SetAttr(ATTR_COLOR, std::move(color));
-
+            outMesh.SetTriangleCount(indices.size() / 3);
             outMesh.SetIndices(std::move(indices));
 
 

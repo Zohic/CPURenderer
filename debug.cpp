@@ -171,7 +171,7 @@ void SkipVert(VertexData& vertex, VertexShaderInput& vInput) {
 	DEBUGPRINT("vertex shader: received pos");
 	vertex.PrintPos();
 	
-	vertex.SetPos(vInput.translationMatrix * vInput.rotationMatrix * vInput.scalingMatrix * vertex.GetPos());
+	vertex.SetPos(vInput.worldMatrix * vertex.GetPos());
 	vertex.SetColor(vertex.GetPos(), vInput.availableAttrs);
 
 	DEBUGPRINT("vertex shader: transformed ");
@@ -234,18 +234,22 @@ public:
 		hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	}
 
+	Transform f1;
+
 	bool OnUserCreate() override {
 		printf("user creating game\n");
 		try {
 			
 			storage.ReserveMesh("triag");
 			Material& simpMat = storage.ReserveMaterial("simple", ATTR_POS_MASK | ATTR_NORMAL_MASK | ATTR_COLOR_MASK);
+			
+			meshLoader.LoadMesh("clockTower.glb", storage.GetMesh("triag"));
+			//testCube.glb
+			//clockTower.glb
+			//rifleV1test.glb
+			//scena
 
-			meshLoader.LoadMesh("testCube.glb", storage.GetMesh("triag"));
-
-			//storage.GetMesh("triag").SetAttr(ATTR_POS, std::vector<float>{0.0f, 0.0f, 0.0f, 30.0f, 0.0f, 0.0f, 30.0f, 30.0f, 0.0f});
-
-			//meshLoader.LoadMesh("testCube.glb", mesh);
+			//storage.GetMesh("triag").PrintData();
 		
 			simpMat.SetVertexShader(SkipVert);
 			simpMat.SetUniform<float>("height", 3.14f);
@@ -273,8 +277,9 @@ public:
 		try {
 
 			ri = new RenderInstance(&(storage.GetShape("test")));
-			ri->transform.pos = Vec3(0, 0, -100.0f);
-			ri->transform.scale = Vec3(20.0f, 20.0f, 20.0f);
+			ri->transform.SetParent(&f1);
+			ri->transform.pos = Vec3(0, 90, -395.0f);
+			ri->transform.scale = Vec3(20.0f, -20.0f, 20.0f);
 		}
 		catch (std::exception& exc) {
 			PrintError("exception during instancing stage \n\t%s:\n", exc.what());
@@ -284,10 +289,12 @@ public:
 		return true;
 	}
 	int cltmp = 0;
+	
 	bool OnUserUpdate(float dt) override {
 		Clear(olc::BLACK);
 		xshift += (15.0f * dt + 54.0f*sinf(timer*0.5f)*dt);
 		yshift += 10 * dt;
+		dt *= 0.05;
 		timer += dt;
 		cellSize = 10.0f + 0.25f*sinf(timer*13.0f);
 
@@ -307,12 +314,19 @@ public:
 		//ri->transform.pos.x() += 1.0f * dt;
 		//ri->transform.pos.y() += 1.0f * dt;
 
-		ri->transform.pos.z() = 130.0f * sinf(timer * 1.2f) - 200.0f;
-		ri->transform.pos.x() = 140.0f * cosf(timer * 3.5f);
-		ri->transform.pos.y() = 30.0f * sinf(timer * 2.0f) * sinf(timer * 5.0f);
+		//ri->transform.pos.z() = 130.0f * sinf(timer * 1.2f) - 200.0f;
+		//ri->transform.pos.x() = 140.0f * cosf(timer * 3.5f);
+		//ri->transform.pos.y() = 30.0f * sinf(timer * 2.0f) * sinf(timer * 5.0f);
 
-		ri->transform.rot.y() += 3.14f * 0.33f * dt;
-		ri->transform.rot.z() += 3.14f * 1.33f * dt;
+		//f1.rot.y() += 3.14f * 1.13f * dt;
+		//f1.pos.z() -= 20.13f * dt;
+
+		ri->transform.rot.y() += 3.14f * 3.33f * dt;
+		//ri->transform.rot.z() += 3.14f * 1.33f * dt;
+
+		//f1.pos.y() = 3.5f * sinf(timer * 2.0f);
+
+		//ri->transform.scale.x() = 40.0f * sin(timer * 2.0f);
 
 		vertToDraw = ((int)(timer / 0.1f)) % 9;
 
@@ -351,7 +365,7 @@ int main() {
 	try {
 		MainC game;
 		printf("constructed game\n");
-		if (game.Construct(400, 400, 1, 1))
+		if (game.Construct(700, 700, 1, 1))
 			game.Start();
 
 
