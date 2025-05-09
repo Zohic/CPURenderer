@@ -5,7 +5,7 @@ using namespace cpuRenderBase;
 Mat4x4 Camera::GetViewMatrix() const {
 	return Mat4x4{};
 }
-Mat4x4 Camera::GetProjectionMatrix() const {
+const Mat4x4& Camera::GetProjectionMatrix() const {
 	return projectionMatrix;
 }
 
@@ -18,11 +18,11 @@ void Camera::SetFrustum(float fovY, float aspectRatio, float near, float far)
 	const float tangent = tan(fovY / 2 * DEG2RAD);    
 	const float fmn = far - near;
 	// params: left, right, bottom, top, near(front), far(back)
-
-	projectionMatrix[0][0] = 1.0f / tangent;
-	projectionMatrix[1][1] = 1.0f / tangent / aspectRatio;
-	projectionMatrix[2][2] = far / fmn;
-	projectionMatrix[2][3] = -(far * near) / fmn;
-	projectionMatrix[3][2] = 1;
-	projectionMatrix[3][3] = 0;
+	projectionMatrix.setZero();
+	projectionMatrix(0, 0) = 1.0f / tangent;
+	projectionMatrix(1, 1) = 1.0f / tangent / aspectRatio;
+	projectionMatrix(2, 2) = far / fmn;
+	projectionMatrix(2, 3) = -(far * near) / fmn;
+	projectionMatrix(3, 2) = 1;
+	projectionMatrix(3, 3) = 0;
 }
