@@ -22,18 +22,18 @@ void update(RenderBackend* back) {
 
 	angle += 0.8f * back->DeltaTime();
 
-	Vec3 lbl = lineB;
-	Vec3 lel = lineE;
+	Vec4 lbl = Vec4(lineB.x(), lineB.y(), lineB.z(), 0.0f);
+	Vec4 lel = Vec4(lineE.x(), lineE.y(), lineE.z(), 0.0f);
 
-	lbl = rot * lbl;
-	lel = rot * lel;
+	lbl = (rot * lbl).eval();
+	lel = (rot * lel).eval();
 
 	lbl.z() += posZ;
 	lel.z() += posZ;
 
 	posZ += 0.25f * back->DeltaTime();
 
-	back->DrawProjectedLine(lbl, lel, { 255, 0, 0 });
+	back->DrawProjectedLine(lbl.block<3, 1>(0, 0), lel.block<3, 1>(0, 0), { 255, 0, 0 });
 };
 
 int main() {

@@ -58,7 +58,7 @@ namespace cpuRenderBase {
 			float sinAngle;
 
 			radians *= 0.5f;
-			gmtl::normalize(axis);
+			axis.normalize();
 			sinAngle = sin(radians);
 			x = axis.x() * sinAngle;
 			y = axis.y() * sinAngle;
@@ -184,8 +184,8 @@ namespace cpuRenderBase {
 		}
 
 		virtual void SetViewPort(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
-			viewportPos.set(x, y);
-			viewportSize.set(w, h);
+			viewportPos  << x, y;
+			viewportSize << w, h;
 		}
 		virtual void DrawWires() = 0;
 		virtual void RenderTriangles() = 0;
@@ -208,8 +208,8 @@ namespace cpuRenderBase {
 #define v1 V4asV3_Const(lineStart.GetPos())
 #define v2 V4asV3_Const(lineEnd.GetPos())
 
-			const float v1_proj = gmtl::dot(v1, V4asV3_Const(plane));
-			const float v2_proj = gmtl::dot(v2, V4asV3_Const(plane));
+			const float v1_proj = v1.dot(V4asV3_Const(plane));
+			const float v2_proj = v2.dot(V4asV3_Const(plane));
 
 			if (fabsf(v2_proj - v1_proj) < 0.0001f)
 				throw std::logic_error("difference of projections is zero");
@@ -217,8 +217,9 @@ namespace cpuRenderBase {
 			const float t = (plane.w() - v1_proj) / (v2_proj - v1_proj);
 
 			//const Vec3 lineStartToEnd = v2 - v1;
+			const Vec3 tmp = v1 + (v2 - v1) * t;
+			lineStart.SetPos(tmp);
 
-			lineStart.SetPos(v1 + (v2 - v1) * t);
 			lineStart.SetNormal(lineStart.GetNormal() + (lineEnd.GetNormal() - lineStart.GetNormal()) * t);
 			if (attrList[ATTR_COLOR_INDEX])
 				lineStart.SetColor(lineStart.GetColor(attrList) + (lineEnd.GetColor(attrList) - lineStart.GetColor(attrList)) * t, attrList);

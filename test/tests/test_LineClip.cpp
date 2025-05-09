@@ -1,5 +1,6 @@
 #include "UnitTest++/Config.h"
 #include "UnitTest++/UnitTestPP.h"
+#include <iostream>
 
 #include <VertexData.h>
 #include <Render.h>

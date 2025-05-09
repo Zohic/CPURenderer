@@ -6,11 +6,6 @@
 
 namespace cpuRenderBase {
 
-	using Vec2 = gmtl::Vec2f;
-	using Vec3 = gmtl::Vec3f;
-	using Vec4 = gmtl::Vec4f;
-	using Mat4x4 = gmtl::Matrix44f;
-
 	class MeshData final : public AttributeAvailability {
 		std::vector<Vec3> vertices;
 		std::vector<Vec3> normal;

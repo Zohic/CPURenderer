@@ -1,5 +1,6 @@
 #define CGLTF_IMPLEMENTATION
 
+#include <iostream>
 #include "MeshLoader.h"
 
 
@@ -129,8 +130,8 @@ void MeshLoader::TransformVertices(const cgltf_node& node) const {
             cpuRenderBase::utils::FillRotationMatrix(quat.toEuler(), rotMat);
 
             for (size_t v = totalVerticesCount_ * 3; v < vertices_.size(); v += 3) {
-                Vec3 temp(vertices_[v + 0], vertices_[v + 1], vertices_[v + 2]);
-                temp = rotMat * temp;
+                Vec4 temp(vertices_[v + 0], vertices_[v + 1], vertices_[v + 2], 0);
+                temp = (rotMat * temp).eval();
                 vertices_[v + 0] = temp.x();
                 vertices_[v + 1] = temp.y();
                 vertices_[v + 2] = temp.z();

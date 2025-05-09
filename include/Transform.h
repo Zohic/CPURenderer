@@ -18,28 +18,28 @@ namespace cpuRenderBase {
 			float cz = cos(angles.z());
 
 			// determine left axis
-			outMat[0][0] = cy * cz;
-			outMat[1][0] = sx * sy * cz + cx * sz;
-			outMat[2][0] = -cx * sy * cz + sx * sz;
+			outMat(0, 0) = cy * cz;
+			outMat(1, 0) = sx * sy * cz + cx * sz;
+			outMat(2, 0) = -cx * sy * cz + sx * sz;
 
 			// determine up axis
-			outMat[0][1] = -cy * sz;
-			outMat[1][1] = -sx * sy * sz + cx * cz;
-			outMat[2][1] = cx * sy * sz + sx * cz;
+			outMat(0, 1) = -cy * sz;
+			outMat(1, 1) = -sx * sy * sz + cx * cz;
+			outMat(2, 1) = cx * sy * sz + sx * cz;
 
 			// determine forward axis
-			outMat[0][2] = sy;
-			outMat[1][2] = -sx * cy;
-			outMat[2][2] = cx * cy;
+			outMat(0, 2) = sy;
+			outMat(1, 2) = -sx * cy;
+			outMat(2, 2) = cx * cy;
 
-			outMat[3][0] = 0;
-			outMat[3][1] = 0;
-			outMat[3][2] = 0;
-			outMat[3][3] = 1;
+			outMat(3, 0) = 0;
+			outMat(3, 1) = 0;
+			outMat(3, 2) = 0;
+			outMat(3, 3) = 1;
 
-			outMat[0][3] = 0;
-			outMat[1][3] = 0;
-			outMat[2][3] = 0;
+			outMat(0, 3) = 0;
+			outMat(1, 3) = 0;
+			outMat(2, 3) = 0;
 		}
 	}
 	

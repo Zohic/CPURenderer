@@ -10,7 +10,7 @@
 #endif // !CPUREN_DEBUG
 #endif // !DEBUGPRINT
 
-#include "gmtl/gmtl.h"
+#include <eigen/Eigen/Dense>
 #include <string>
 
 
@@ -22,10 +22,10 @@ namespace cpuRenderBase {
 
 	
 
-	using Vec2 = gmtl::Vec2f;
-	using Vec3 = gmtl::Vec3f;
-	using Vec4 = gmtl::Vec4f;
-	using Mat4x4 = gmtl::Matrix44f;
+	using Vec2 = Eigen::Vector2f;
+	using Vec3 = Eigen::Vector3f;
+	using Vec4 = Eigen::Vector4f;
+	using Mat4x4 = Eigen::Matrix<float, 4, 4>;
 
 	constexpr float PI = 3.14159265f;
 	constexpr float PI_2 = PI * 0.5f;

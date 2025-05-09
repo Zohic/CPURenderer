@@ -17,7 +17,7 @@ namespace cpuRenderSimple {
     public:
 
         const Mat4x4& GetProjectionMatrix() const {
-            return cam.GetProjectionMatrix();
+            return this->cam.GetProjectionMatrix();
         }
 
         Transformer(VertexBufferType* buff);
@@ -91,7 +91,9 @@ namespace cpuRenderSimple {
 
 
             Vec3 croosProd;
-            gmtl::cross(croosProd, Vec3(points[1] - points[0]), Vec3(points[2] - points[0]));
+            Vec3 d1 = (points[1] - points[0]).eval();
+            Vec3 d2 = (points[2] - points[0]).eval();
+            croosProd = d1.cross(d2);
 
             bool toDraw = true;
 
@@ -101,11 +103,11 @@ namespace cpuRenderSimple {
             case CullType::NO:
                 break;
             case CullType::FRONT:
-                if (gmtl::dot(croosProd, points[0]) > 0.001f)
+                if (croosProd.dot(points[0]) > 0.001f)
                     toDraw = false;
                 break;
             case CullType::BACK:
-                if (gmtl::dot(croosProd, points[0]) < -0.001f)
+                if (croosProd.dot(points[0]) < -0.001f)
                     toDraw = false;
                 break;
             }

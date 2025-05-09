@@ -64,10 +64,10 @@ namespace cpuRenderBase {
 
 		using cstr_t = const std::string&;
 
-		void DrawProjectedLine(const Vec3 p1, const Vec3 p2, gmtl::Vec<uint8_t, 3> color) const {
-			Mat4x4 m;
-			memcpy(m.mData, transformer.GetProjectionMatrix().mData, sizeof(float) * 16);
-		
+		void DrawProjectedLine(const Vec3 p1, const Vec3 p2, Eigen::Vector<uint8_t, 3> color) const {
+			Mat4x4 m = transformer.GetProjectionMatrix();
+			
+			
 
 			Vec4 pp1 = m * Vec4(p1.x(), p1.y(), p1.z(), 1.0f);
 			Vec4 pp2 = m * Vec4(p2.x(), p2.y(), p2.z(), 1.0f);

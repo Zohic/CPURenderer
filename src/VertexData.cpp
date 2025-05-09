@@ -101,6 +101,7 @@ void VertexData::SetFromMesh(const MeshData* const mesh, const bool* reqList, si
 void VertexData::SetPos(const Vec3& pos) {
 	if (!attributes)
 		throw std::logic_error("cannot SetPos(): vertex data is null\n");
+
 	attributes[0] = pos.x();
 	attributes[1] = pos.y();
 	attributes[2] = pos.z();

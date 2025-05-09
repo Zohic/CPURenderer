@@ -26,10 +26,10 @@ void Transform::SetParent(Transform* const par) {
 
 Mat4x4 Transform::GetTranslationMatrix() const {
 	Mat4x4 mTrans;
-	mTrans[0][3] = pos.x();
-	mTrans[1][3] = pos.y();
-	mTrans[2][3] = pos.z();
-	mTrans[3][3] = 1.0f;
+	mTrans(0, 3) = pos.x();
+	mTrans(1, 3) = pos.y();
+	mTrans(2, 3) = pos.z();
+	mTrans(3, 3) = 1.0f;
 
 	return mTrans;
 }
@@ -37,10 +37,10 @@ Mat4x4 Transform::GetTranslationMatrix() const {
 Mat4x4 Transform::GetScaleMatrix() const {
 	Mat4x4 mScale;
 
-	mScale[0][0] = scale.x();
-	mScale[1][1] = scale.y();
-	mScale[2][2] = scale.z();
-	mScale[3][3] = 1.0f;
+	mScale(0, 0) = scale.x();
+	mScale(1, 1) = scale.y();
+	mScale(2, 2) = scale.z();
+	mScale(3, 3) = 1.0f;
 
 	return mScale;
 }
