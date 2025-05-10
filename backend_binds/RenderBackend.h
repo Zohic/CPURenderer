@@ -10,8 +10,12 @@
 #define CPU_RENDER_IMPLEMENTATION
 #include "../include/Transformer.h"
 #include "../include/CustomizableRasterizer.h"
+#include "../include/Transform.h"
 
 namespace cpuRenderBase {
+
+	
+
 	using namespace cpuRenderSimple;
 
 	class RenderBackend: public IDrawingFunctional {
@@ -27,17 +31,18 @@ namespace cpuRenderBase {
 		Transformer<VertexBuffer> transformer = Transformer<VertexBuffer>(&vertexBuffer);
 		CustomizableRasterizer raster = CustomizableRasterizer(&vertexBuffer, static_cast<IDrawingFunctional*>(this));
 
-		std::vector<RenderInstance> ren_instances;
+		std::vector<RenderInstance*> ren_instances;
 
 		
 	protected:
 
 		void PipeLineProcess() {
+			transformer.SetCulling(decltype(transformer)::CullType::NO);
 			try {
 				DEBUGPRINT("main loop transformation begin\n");
 				vertexBuffer.ResetIterators(true);
 				for (const auto& ren_inst : ren_instances) {
-					transformer.ProcessRenderInstance(ren_inst);
+					transformer.ProcessRenderInstance(*ren_inst);
 				}
 			}
 			catch (std::exception& exc) {
@@ -60,9 +65,89 @@ namespace cpuRenderBase {
 
 	public:
 
-		RenderBackend(BackendFunction setupFunc, BackendFunction updateFunc) : setupFunction(setupFunc), updateFunction(updateFunc) {};
+		static void SkipVert(VertexData& vertex, VertexShaderInput& vInput) {
+			DEBUGPRINT("vertex shader: received pos");
+			//vertex.PrintPos();
+
+			vertex.SetPos((vInput.worldMatrix * vertex.GetPos()).eval());
+			//vertex.SetColor(vertex.GetPos(), vInput.availableAttrs);
+
+			DEBUGPRINT("vertex shader: transformed ");
+			//vertex.PrintPos();
+
+			DEBUGPRINT("vertex shader: color ");
+			//vertex.PrintColor(vInput.availableAttrs);
+
+
+			vertex.SetPos((vInput.projectionMatrix * vertex.GetPos()).eval());
+
+			//Vec4 p = vertex.GetPos();
+
+			//Vec3 n = vertex.GetNormal();
+
+
+			//DEBUGPRINT("vertex shader: normal ");
+			//vertex.PrintNormal();
+
+			//n = vInput.rotationMatrix * n;
+			//vertex.SetNormal(n);
+
+			//DEBUGPRINT("vertex shader: rotated normal ");
+			//vertex.PrintNormal();
+
+
+			//DEBUGPRINT("vertex shader: projected ");
+			//vertex.PrintPos();
+
+
+
+			//DEBUGPRINT("vertex shader: screen space ");
+			//DEBUGPRINT("(%f, %f, %f, %f)\n", p.x(), p.y(), p.z(), p.w());
+
+			//vertex.SetPos(p);
+
+		}
+
+		RenderBackend(BackendFunction setupFunc, BackendFunction updateFunc) : setupFunction(setupFunc), updateFunction(updateFunc) {
+			storage.ReserveMaterial(
+				"simplest material", 
+				AttributeAvailability::AttrListToMask(ATTR_PN)).
+					SetVertexShader(SkipVert);
+			
+			MeshData planeData;
+			planeData.SetAttrAvailability(storage.GetMaterial("simplest material").GetAttrMask());
+
+			planeData.SetAttr<ATTR_POS_INDEX>(std::vector<float>{
+				-1.0f, -1.0f, 0.0f,
+				 1.0f, -1.0f, 0.0f,
+				-1.0f,  1.0f, 0.0f,
+				 1.0f, -1.0f, 0.0f,
+				 1.0f,  1.0f, 0.0f
+			});
+			planeData.SetAttr<ATTR_NORMAL_INDEX>(std::vector<float>(15, 0.0f));
+			planeData.SetIndices(std::vector<uint32_t>{
+				0, 1, 2,
+				2, 3, 4
+			});
+			
+			storage.ReserveMesh("plane mesh").AddMesh(std::move(planeData));
+			storage.RegisterRenderShape("plane", "plane mesh", "simplest material");
+		};
 
 		using cstr_t = const std::string&;
+
+		RenderInstance& MakePlane(Vec3 pos, Vec2 size) {
+			RenderInstance* planeInst = new RenderInstance(
+				Transform(
+					pos, 
+					Vec3(0.0f, 0.0f, 0.0f), 
+					Vec3(size.x(), size.y(), 1.0f)), 
+				&storage.GetShape("plane"));
+
+			ren_instances.push_back(planeInst);
+
+			return *planeInst;
+		}
 
 		void DrawProjectedLine(const Vec3 p1, const Vec3 p2, Eigen::Vector<uint8_t, 3> color) const {
 			Mat4x4 m = transformer.GetProjectionMatrix();
