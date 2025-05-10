@@ -25,8 +25,10 @@ VertexData VertexData::Copy(const bool* attrList) const {
 	copy.attributes = new float[attrSize];
 	memcpy(copy.attributes, this->attributes, attrSize * sizeof(float));
 
-#ifdef CPUREN_DEBUG
-	copy.size = size;
+#ifdef _DEBUG
+	copy._attrList = new bool[ATTRIBUTES_NUM];
+	for (int i = 0; i < 5; i++)
+		copy._attrList[i] = attrList[i];
 #endif
 	//copy.attributes.reset(new float[attrSize]);
 	//memcpy(copy.attributes, this->attributes, attrSize * sizeof(float));

@@ -178,7 +178,7 @@ void MeshLoader::LoadAttributes(MeshData& md, cgltf_mesh& mesh_ref, const cgltf_
             TransformVertices(node);
 
             prevCap = vertices_.capacity();
-            md.SetAttr(ATTR_POS_INDEX, std::move(vertices_));
+            md.SetAttr<ATTR_POS_INDEX>(std::move(vertices_));
             vertices_.reserve(prevCap);
 
             attrMask_ |= ATTR_POS_MASK;
@@ -195,7 +195,7 @@ void MeshLoader::LoadAttributes(MeshData& md, cgltf_mesh& mesh_ref, const cgltf_
             FillAttribute(attribute, 3, normal_);
 
             prevCap = normal_.capacity();
-            md.SetAttr(ATTR_NORMAL_INDEX, std::move(normal_));
+            md.SetAttr<ATTR_NORMAL_INDEX>(std::move(normal_));
             normal_.reserve(prevCap);
 
             attrMask_ |= ATTR_NORMAL_MASK;
@@ -210,7 +210,7 @@ void MeshLoader::LoadAttributes(MeshData& md, cgltf_mesh& mesh_ref, const cgltf_
             FillAttribute(attribute, 4, tangent_);
 
             prevCap = tangent_.capacity();
-            md.SetAttr(ATTR_TANGENT_INDEX, std::move(tangent_));
+            md.SetAttr<ATTR_TANGENT_INDEX>(std::move(tangent_));
             tangent_.reserve(prevCap);
 
             attrMask_ |= ATTR_TANGENT_MASK;
@@ -225,7 +225,7 @@ void MeshLoader::LoadAttributes(MeshData& md, cgltf_mesh& mesh_ref, const cgltf_
             FillAttribute(attribute, 2, texcoord_);
 
             prevCap = texcoord_.capacity();
-            md.SetAttr(ATTR_TEXCOORD_INDEX, std::move(texcoord_));
+            md.SetAttr<ATTR_TEXCOORD_INDEX>(std::move(texcoord_));
             texcoord_.reserve(prevCap);
 
             attrMask_ |= ATTR_TEXCOORD_MASK;
@@ -239,7 +239,7 @@ void MeshLoader::LoadAttributes(MeshData& md, cgltf_mesh& mesh_ref, const cgltf_
                 FillAttribute(attribute, 4, color_);
 
                 prevCap = color_.capacity();
-                md.SetAttr(ATTR_COLOR_INDEX, std::move(color_));
+                md.SetAttr<ATTR_COLOR_INDEX>(std::move(color_));
                 color_.reserve(prevCap);
 
 

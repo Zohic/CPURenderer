@@ -33,11 +33,13 @@ namespace cpuRenderSimple {
 		ResourceStorge() = default;
 
 		//
-		void ReserveMesh(const std::string& name) {
+		Mesh& ReserveMesh(const std::string& name) {
 			if (meshStorage.find(name) != meshStorage.end())
 				throw std::logic_error(C_STR("a mesh with that name is already reserved: "s + name));
 
 			meshStorage[name].reset(new Mesh());
+
+			return *(meshStorage[name]);
 		}
 		Material& ReserveMaterial(const std::string& name, uint8_t mask) {
 			if (materialStorage.find(name) != materialStorage.end())

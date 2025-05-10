@@ -42,19 +42,22 @@ MeshData& MeshData::operator=(MeshData&& old) noexcept {
 }
 
 //this works because Vec2, Vec3, Vec4 classes have only one field as array of floats
-void MeshData::SetAttr(size_t ind, std::vector<float>&& list) {
-	if (ind > ATTR_COLOR_INDEX) {
-		throw std::logic_error("invalid list ind");
-	}
 
-	const char* const offsetByAttributes = ((char*)this) + offsetof(MeshData, vertices);
-	std::vector<float>* const firstList = (std::vector<float>*const)(offsetByAttributes);
+//void MeshData::SetAttr(size_t ind, std::vector<float>&& list) {
+//	if (ind > ATTR_COLOR_INDEX) {
+//		throw std::logic_error("invalid list ind");
+//	}
+//
+//	const char* const offsetByAttributes = ((char*)this) + offsetof(MeshData, vertices);
+//	std::vector<float>* const firstList = (std::vector<float>*const)(offsetByAttributes);
+//
+//	*(firstList + ind) = std::move(list);
+//}
 
-	*(firstList + ind) = std::move(list);
-}
 
 void MeshData::SetIndices(std::vector<uint32_t>&& list) {
 	indices = list;
+	CalcTriangleCount();
 }
 void MeshData::PrintData() const {
 	for (int i = 0; i < vertices.size(); i += 1) {

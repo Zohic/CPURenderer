@@ -9,6 +9,8 @@ namespace cpuRenderBase {
 			float sx = sin(angles.x());
 			float cx = cos(angles.x());
 
+			outMat.setZero();
+
 			// rotation angle about Y-axis (yaw)
 			float sy = sin(angles.y());
 			float cy = cos(angles.y());

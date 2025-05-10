@@ -36,7 +36,7 @@ bool olcPGEBind::OnUserCreate() {
 }
 
 bool olcPGEBind::OnUserUpdate(float dt) {
-	olc::PixelGameEngine::Clear(olc::BLACK);
+	olc::PixelGameEngine::Clear(olc::Pixel(10, 10, 10));
 	this->deltaTime = dt;
 	this->updateFunction(this);
 	this->PipeLineProcess();

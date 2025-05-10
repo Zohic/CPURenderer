@@ -26,6 +26,7 @@ void Transform::SetParent(Transform* const par) {
 
 Mat4x4 Transform::GetTranslationMatrix() const {
 	Mat4x4 mTrans;
+	mTrans.setIdentity();
 	mTrans(0, 3) = pos.x();
 	mTrans(1, 3) = pos.y();
 	mTrans(2, 3) = pos.z();
@@ -36,6 +37,7 @@ Mat4x4 Transform::GetTranslationMatrix() const {
 
 Mat4x4 Transform::GetScaleMatrix() const {
 	Mat4x4 mScale;
+	mScale.setZero();
 
 	mScale(0, 0) = scale.x();
 	mScale(1, 1) = scale.y();
@@ -53,11 +55,15 @@ Mat4x4 Transform::GetRotationMatrix() const {
 }
 
 void Transform::TransformWorldMatrix(Mat4x4& res) const {
-	res = GetTranslationMatrix() * GetRotationMatrix() * GetScaleMatrix() * res;
+	const auto a = GetScaleMatrix() * res;
+	const auto b = GetRotationMatrix() * a;
+	const auto c = GetTranslationMatrix() * b;
+	res = c.eval();
 }
 
 Mat4x4 Transform::GetWorldMatrix() const {
 	Mat4x4 resultMat;
+	resultMat.setIdentity();
 	Transform* trans = parent;
 
 	TransformWorldMatrix(resultMat);

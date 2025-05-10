@@ -49,7 +49,7 @@ namespace cpuRenderSimple {
                 continue;
 
             renderTrigs_.push_back(TriangleWrap(&v1));
-            return;
+            continue;
             //printf("culled triganle : %zu/%zu\n", verts[0], verts[1]);
 
             const Vec4 planes[5]{
@@ -175,13 +175,13 @@ namespace cpuRenderSimple {
             };
 
 
-            const Vec4 c1 = (v1.GetColor(mat->GetAttrList()) + v2.GetColor(mat->GetAttrList())) * 0.5f * 256.0f;
-            const Vec4 c2 = (v2.GetColor(mat->GetAttrList()) + v3.GetColor(mat->GetAttrList())) * 0.5f * 256.0f;
-            const Vec4 c3 = (v3.GetColor(mat->GetAttrList()) + v1.GetColor(mat->GetAttrList())) * 0.5f * 256.0f;
+            //const Vec4 c1 = (v1.GetColor(mat->GetAttrList()) + v2.GetColor(mat->GetAttrList())) * 0.5f * 256.0f;
+            //const Vec4 c2 = (v2.GetColor(mat->GetAttrList()) + v3.GetColor(mat->GetAttrList())) * 0.5f * 256.0f;
+            //const Vec4 c3 = (v3.GetColor(mat->GetAttrList()) + v1.GetColor(mat->GetAttrList())) * 0.5f * 256.0f;
 
-            DrawLineV(p1, p2, c1);
-            DrawLineV(p2, p3, c2);
-            DrawLineV(p3, p1, c3);
+            DrawLineV(p1, p2, Vec4(1.0f, 1.0f, 1.0f, 1.0f) * 255.0f);
+            DrawLineV(p2, p3, Vec4(1.0f, 1.0f, 1.0f, 1.0f) * 255.0f);
+            DrawLineV(p3, p1, Vec4(1.0f, 1.0f, 1.0f, 1.0f) * 255.0f);
 
         }
 

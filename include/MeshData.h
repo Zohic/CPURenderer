@@ -3,8 +3,12 @@
 
 #include "CPURENDefines.h"
 #include "AttributeAvailability.h"
+#include <iostream>
+
 
 namespace cpuRenderBase {
+
+	constexpr size_t ATTR_VEC_SIZE[] = { 3, 3, 4, 2, 4 };
 
 	class MeshData final : public AttributeAvailability {
 		std::vector<Vec3> vertices;
@@ -28,7 +32,18 @@ namespace cpuRenderBase {
 		MeshData& operator=(MeshData&& old) noexcept;
 
 
-		void SetAttr(size_t ind, std::vector<float>&& list);
+		template<size_t attr_ind>
+		void SetAttr(std::vector<float>&& list)
+		{
+			if (list.size() % ATTR_VEC_SIZE[attr_ind] != 0)
+				throw std::logic_error("size must be divisible by");
+
+			const char* const offsetByAttributes = ((char*)this) + offsetof(MeshData, vertices);
+			std::vector<float>* const firstList = (std::vector<float>*const)(offsetByAttributes);
+			
+			*(firstList + attr_ind) = std::move(list);
+		}
+
 
 		void SetIndices(std::vector<uint32_t>&& list);
 		void PrintData() const;
