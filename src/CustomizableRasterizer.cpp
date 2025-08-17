@@ -34,6 +34,8 @@ namespace cpuRenderSimple {
             const Vec4& p2 = v2.GetPos();
             const Vec4& p3 = v3.GetPos();
 
+            //renderTrigs_.push_back(TriangleWrap(&v1));
+            //continue;
 
             if (p1.x() > p1.w() && p2.x() > p2.w() && p3.x() > p3.w())
                 continue;
@@ -43,13 +45,16 @@ namespace cpuRenderSimple {
                 continue;
             if (p1.y() < -p1.w() && p2.y() < -p2.w() && p3.y() < -p3.w())
                 continue;
-            if (p1.z() < -p1.w() && p2.z() < -p2.w() && p3.z() < -p3.w())
+            //if (p1.z() < -p1.w() && p2.z() < -p2.w() && p3.z() < -p3.w())
+            //    continue;
+            //if (p1.y() < 0 && p2.y() < 0 && p3.y() < 0)
+            //    continue;
+            if (p1.z() < 0 && p2.z() < 0 && p3.z() < 0)
                 continue;
-            if (p1.y() < 0 && p2.y() < 0 && p3.y() < 0)
-                continue;
+            
+            //renderTrigs_.push_back(TriangleWrap(&v1));
+            //continue;
 
-            renderTrigs_.push_back(TriangleWrap(&v1));
-            continue;
             //printf("culled triganle : %zu/%zu\n", verts[0], verts[1]);
 
             const Vec4 planes[5]{
@@ -62,8 +67,8 @@ namespace cpuRenderSimple {
 
 
             uint8_t newTrigs = 0;
-            std::vector <TriangleWrap> to_check;
-            to_check.reserve(5);
+            std::vector<TriangleWrap> to_check;
+            //to_check.reserve(5);
             to_check.emplace_back(&v1);
 
 
@@ -101,6 +106,9 @@ namespace cpuRenderSimple {
         DEBUGPRINT("cleared buffer before drawing wires\n");
         int tind = 0;
 
+        std::vector<Vec4> drawn;
+        std::cout << renderTrigs_.size() << '\n';
+
         for (const auto& trig : renderTrigs_) {
             const VertexData& v1 = trig[0];
             const VertexData& v2 = trig[1];
@@ -136,15 +144,17 @@ namespace cpuRenderSimple {
             p3.x() /= p3.w();
             p3.y() /= p3.w();
 
-
+            drawn.push_back(p1);
+            drawn.push_back(p2);
+            drawn.push_back(p3);
 
             //DEBUGPRINT("vertex shader: clip space ");
             //DEBUGPRINT("(%f, %f, %f, %f)\n", p.x(), p.y(), p.z(), p.w());
 
-            const float szx = viewportSize.x() / 2;
-            const float szy = viewportSize.y() / 2;
-            const float px = szx + viewportPos.x();
-            const float py = szy + viewportPos.y();
+            const float szx = viewportSize.x() / 3;
+            const float szy = viewportSize.y() / 3;
+            const float px = viewportPos.x() + viewportSize.x() / 2;
+            const float py = viewportPos.y() + viewportSize.y() / 2;
 
             p1.x() *= szx;
             p1.y() *= szy;
@@ -161,6 +171,7 @@ namespace cpuRenderSimple {
             p3.y() += py;
 
 
+           
 
             auto DrawLineV = [&](const Vec4& _v1, const Vec4& _v2, const Vec4& clr) {
                 drawingTool->DrawLine(_v1.x(), _v1.y(),

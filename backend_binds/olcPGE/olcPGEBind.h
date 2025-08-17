@@ -25,6 +25,8 @@ public:
 		uint32_t x3, uint32_t y3, 
 		uint8_t r, uint8_t g, uint8_t b) const override;
 
+	void PrintText(uint32_t, uint32_t, const std::string&) const override;
+
 	// implement RenderBackend
 	void Run(uint32_t width, uint32_t height, bool fullscreen) override;
 

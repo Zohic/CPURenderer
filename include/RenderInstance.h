@@ -16,8 +16,10 @@ namespace cpuRenderBase {
 		RenderInstance(Transform itrans, const RenderShape* ishapeID);
 
 		RenderInstance(const RenderInstance& other);
+		RenderInstance(RenderInstance&& other) = default;
 
 		RenderInstance& operator=(const RenderInstance& other);
+		RenderInstance& operator=(RenderInstance&& other) = default;
 
 		const RenderShape* GetShape() const;
 	};

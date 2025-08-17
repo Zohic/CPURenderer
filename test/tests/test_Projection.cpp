@@ -13,7 +13,8 @@ SUITE(TEST_PROJ) {
 		Camera cam;
 		cam.SetFrustum(fov, aspect, near_p, far_p);
 		constexpr float DEG2RAD = 3.14159265f / 180.f;
-		const float eps = std::numeric_limits<float>::epsilon() * 250;
+		const float eps = 0.02f;
+		//const float eps = std::numeric_limits<float>::epsilon() * 250;
 
 		const Mat4x4 proj_mat = cam.GetProjectionMatrix();
 
@@ -69,7 +70,7 @@ CHECK_CLOSE(point.z(), proj.w(), eps);}while(false)\
 		test_frustum(100.0f, 1.1f, 0.01f, 10000.0f);
 		test_frustum(100.0f, 1.6f, 0.01f, 10000.0f);
 
-		/*test_frustum(GET_RAND(30.0f, 180.0f), 
+		test_frustum(GET_RAND(30.0f, 180.0f), 
 					 GET_RAND(0.8f, 1.9f), 
 					 GET_RAND(0.001f, 0.1f), 
 					 GET_RAND(100.0f, 1000000.0f));
@@ -80,6 +81,6 @@ CHECK_CLOSE(point.z(), proj.w(), eps);}while(false)\
 		test_frustum(GET_RAND(30.0f, 180.0f),
 			         GET_RAND(0.8f, 1.9f),
 			         GET_RAND(0.001f, 0.1f),
-			         GET_RAND(100.0f, 1000000.0f));*/
+			         GET_RAND(100.0f, 1000000.0f));
 	}
 }

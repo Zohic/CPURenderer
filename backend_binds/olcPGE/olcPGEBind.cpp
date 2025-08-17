@@ -18,6 +18,10 @@ void olcPGEBind::DrawLine(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, ui
 	olc::PixelGameEngine::DrawLine(x1, y1, x2, y2, olc::Pixel(r, g, b));
 }
 
+void olcPGEBind::PrintText(uint32_t x, uint32_t y, const std::string& txt) const {
+	const_cast<olc::PixelGameEngine*>(static_cast<const olc::PixelGameEngine*>(this))->DrawString(x, y, txt);
+}
+
 void olcPGEBind::FillTriangle(
 	uint32_t x1, uint32_t y1, 
 	uint32_t x2, uint32_t y2, 

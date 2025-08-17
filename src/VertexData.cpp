@@ -25,11 +25,6 @@ VertexData VertexData::Copy(const bool* attrList) const {
 	copy.attributes = new float[attrSize];
 	memcpy(copy.attributes, this->attributes, attrSize * sizeof(float));
 
-#ifdef _DEBUG
-	copy._attrList = new bool[ATTRIBUTES_NUM];
-	for (int i = 0; i < 5; i++)
-		copy._attrList[i] = attrList[i];
-#endif
 	//copy.attributes.reset(new float[attrSize]);
 	//memcpy(copy.attributes, this->attributes, attrSize * sizeof(float));
 
@@ -39,19 +34,13 @@ VertexData VertexData::Copy(const bool* attrList) const {
 VertexData::VertexData(VertexData&& old) noexcept {
 	this->attributes = old.attributes;
 	old.attributes = nullptr;
-#ifdef _DEBUG
-	this->_attrList = old._attrList;
-	old._attrList = nullptr;
-#endif
+
 	//attributes = std::move(old.attributes);
 }
 VertexData& VertexData::operator=(VertexData&& old) noexcept {
 	this->attributes = old.attributes;
 	old.attributes = nullptr;
-#ifdef _DEBUG
-	this->_attrList = old._attrList;
-	old._attrList = nullptr;
-#endif
+
 	//attributes = std::move(old.attributes);
 	return *this;
 }
@@ -64,11 +53,6 @@ void VertexData::Init(const bool* attrList) {
 	attributes = new float[attrSize];
 	memset(attributes, 0, attrSize * sizeof(float));
 
-#ifdef _DEBUG
-	_attrList = new bool[ATTRIBUTES_NUM];
-	for(int i=0;i<5;i++)
-		_attrList[i]= attrList[i];
-#endif
 
 	//DEBUGPRINT("size is set to %i: \n", attrSize);
 	//attributes.reset(new float[attrSize]);

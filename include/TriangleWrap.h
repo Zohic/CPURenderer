@@ -4,7 +4,10 @@
 
 namespace cpuRenderBase {
 	struct TriangleWrap {
-		explicit TriangleWrap() = delete;
+		explicit TriangleWrap() {
+			
+		}
+
 		explicit TriangleWrap(VertexData* v1);
 		explicit TriangleWrap(const VertexData* v1);
 
@@ -19,9 +22,9 @@ namespace cpuRenderBase {
 		VertexData& operator[](const size_t n);
 		const VertexData& operator[](size_t n) const;
 
-		static TriangleWrap NewTriag() {
-			return TriangleWrap(new VertexData[3]);
-		};
+		//static TriangleWrap NewTriag() {
+		//	return TriangleWrap(new VertexData[3]);
+		//};
 
 		void Free() {
 			_vert = nullptr;
@@ -29,7 +32,7 @@ namespace cpuRenderBase {
 
 		~TriangleWrap() noexcept(false);
 	private:
-		VertexData* _vert;
+		VertexData* _vert = nullptr;
 	};
 
 }

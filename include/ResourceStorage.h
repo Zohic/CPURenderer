@@ -60,11 +60,12 @@ namespace cpuRenderSimple {
 			return *(materialStorage[name]);
 		}
 
-		void RegisterRenderShape(const std::string& shapeName, const std::string& meshName, const std::string& matName) {
+		RenderShape& RegisterRenderShape(const std::string& shapeName, const std::string& meshName, const std::string& matName) {
 			if (renderShapes.find(shapeName) != renderShapes.end())
 				throw std::logic_error(("a shape with that name already exists: "s + shapeName).c_str()); 
 
 			renderShapes.emplace(shapeName, RenderShape(&GetMesh(meshName), &GetMaterial(matName)));
+			return renderShapes.at(shapeName);
 		}
 		const RenderShape& GetShape(const std::string& shapeName) const {
 			if (renderShapes.find(shapeName) == renderShapes.end())

@@ -47,7 +47,7 @@ namespace cpuRenderSimple {
         *dataSize = 0;
 
         try {
-            printf("trying to open file %s", fileName);
+            printf("trying to open file %s\n", fileName);
             fl = fopen(fileName, "rb");
         }
         catch (std::exception& exc) {

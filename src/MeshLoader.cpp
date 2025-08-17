@@ -18,7 +18,7 @@ void MeshLoader::OpenFile() const {
     fileData_.reset(LoadFileData<LoadMethod::C_FILE>(fileName_, &dataSize_));
 
     if (!fileData_) {
-        printf("failed to load file (%s) data", fileName_);
+        printf("failed to load file's (%s) data\n", fileName_);
         throw std::logic_error(("failed to load file (%s) data"s + fileName_).c_str());
     }
 }

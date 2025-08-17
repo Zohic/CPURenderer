@@ -5,10 +5,6 @@
 namespace cpuRenderBase {
 	class VertexData {
 			float* attributes;
-	#ifdef _DEBUG
-			bool* _attrList;
-	#endif // _DEBUG
-
 			inline static size_t GetAttrFloatSize(const bool* attrMask);
 
 			VertexData(const VertexData& other) = delete;
@@ -20,10 +16,6 @@ namespace cpuRenderBase {
 				if (attributes != nullptr)
 					delete[] attributes;
 				//else throw std::logic_error("there was VertexData object with nullptr attributes");
-	#ifdef _DEBUG
-				if(_attrList != nullptr)
-					delete[] _attrList;
-	#endif
 			}
 			VertexData Copy(const bool* attrList) const;
 

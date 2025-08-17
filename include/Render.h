@@ -135,7 +135,9 @@ namespace cpuRenderBase {
 		Camera cam;
 	public:
 
-
+		const Camera& GetCamRef() const {
+			return cam;
+		}
 		TransformerBase(VertexBufferType* buff) : buffer(buff) {
 			if (!buff)
 				throw std::logic_error("vertex buffer pointer is null");
@@ -154,6 +156,8 @@ namespace cpuRenderBase {
 			uint32_t x2, uint32_t y2, 
 			uint32_t x3, uint32_t y3, 
 			uint8_t r, uint8_t g, uint8_t b) const = 0;
+		virtual void PrintText(uint32_t x, uint32_t y, const std::string& str) const = 0;
+
 	};
 
 	class RasterizerBase {
@@ -301,7 +305,9 @@ namespace cpuRenderBase {
 
 			if (insidePointCount == 2 && outsidePointCount == 1)
 			{
-				to_append.push_back(std::move(TriangleWrap::NewTriag()));
+				VertexData* newTrigVerts = new VertexData[3];
+
+				to_append.push_back(TriangleWrap(newTrigVerts));
 
 				TriangleWrap& newTrig = to_append.back();
 

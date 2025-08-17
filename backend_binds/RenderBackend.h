@@ -65,6 +65,10 @@ namespace cpuRenderBase {
 
 	public:
 
+		const Camera& GetMainCamRef() const {
+			return transformer.GetCamRef();
+		}
+
 		static void SkipVert(VertexData& vertex, VertexShaderInput& vInput) {
 			DEBUGPRINT("vertex shader: received pos");
 			//vertex.PrintPos();
@@ -109,11 +113,15 @@ namespace cpuRenderBase {
 		}
 
 		RenderBackend(BackendFunction setupFunc, BackendFunction updateFunc) : setupFunction(setupFunc), updateFunction(updateFunc) {
-			storage.ReserveMaterial(
+			/*storage.ReserveMaterial(
 				"simplest material", 
 				AttributeAvailability::AttrListToMask(ATTR_PN)).
-					SetVertexShader(SkipVert);
+					SetVertexShader(SkipVert);*/
 			
+			storage.ReserveMaterial(
+				"simplest material", ATTR_POS_MASK).
+				SetVertexShader(SkipVert);
+
 			MeshData planeData;
 			planeData.SetAttrAvailability(storage.GetMaterial("simplest material").GetAttrMask());
 
@@ -149,6 +157,7 @@ namespace cpuRenderBase {
 			return *planeInst;
 		}
 
+		
 		void DrawProjectedLine(const Vec3 p1, const Vec3 p2, Eigen::Vector<uint8_t, 3> color) const {
 			Mat4x4 m = transformer.GetProjectionMatrix();
 			
@@ -192,6 +201,10 @@ namespace cpuRenderBase {
 			meshLoader.LoadMesh(path.c_str(), storage.GetMesh(name));
 		}
 
+		void RegisterMesh(cstr_t name, Mesh&& m) {
+			storage.ReserveMesh(name) = std::move(m);
+		}
+
 		Material& MakeMaterial(cstr_t name, uint8_t attribute_mask) {
 			return storage.ReserveMaterial(name, attribute_mask);
 		}
@@ -200,8 +213,12 @@ namespace cpuRenderBase {
 			return storage.ReserveMaterial(name, AttributeAvailability::AttrListToMask(attribute_list));
 		}
 
-		void MakeRenderShape(cstr_t name, cstr_t mesh_name, cstr_t material_name) {
-			storage.RegisterRenderShape(name, mesh_name, material_name);
+		RenderShape& MakeRenderShape(cstr_t name, cstr_t mesh_name, cstr_t material_name) {
+			return storage.RegisterRenderShape(name, mesh_name, material_name);
+		}
+
+		const RenderShape& GetRenderShape(cstr_t name) {
+			return storage.GetShape(name);
 		}
 
 		void SetupCamera(float fovY, float aspectRatio, float front, float back) {
@@ -210,6 +227,10 @@ namespace cpuRenderBase {
 
 		void SetupViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
 			raster.SetViewPort(x, y, w, h);
+		}
+
+		void AddInstance(RenderInstance* instnc) {
+			ren_instances.push_back(instnc);
 		}
 
 		float DeltaTime() const { return deltaTime; };

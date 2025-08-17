@@ -6,6 +6,23 @@ Mesh::Mesh() {
 
 }
 
+Mesh::Mesh(MeshData&& m) {
+	meshes.emplace_back(std::move(m));
+}
+Mesh::Mesh(std::vector<MeshData>&& msh): meshes(std::move(msh)) {
+
+}
+
+
+Mesh::Mesh(Mesh&& m) {
+	this->meshes = std::move(m.meshes);
+}
+
+Mesh& Mesh::operator=(Mesh&& m) {
+	this->meshes = std::move(m.meshes);
+	return *this;
+}
+
 //reserves
 void Mesh::ReserveMeshCount(size_t c) {
 	meshes.reserve(c);
