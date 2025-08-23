@@ -1,4 +1,5 @@
 #include "CustomizableRasterizer.h"
+#include "PlaneProcessing.h"
 
 namespace cpuRenderSimple {
     CustomizableRasterizer::CustomizableRasterizer(VertexBufferBase* ivertBuffer, IDrawingFunctional* idrawingFunctional) :
@@ -52,17 +53,17 @@ namespace cpuRenderSimple {
             if (p1.z() < 0 && p2.z() < 0 && p3.z() < 0)
                 continue;
             
-            //renderTrigs_.push_back(TriangleWrap(&v1));
-            //continue;
+            renderTrigs_.push_back(TriangleWrap(&v1));
+            continue;
 
             //printf("culled triganle : %zu/%zu\n", verts[0], verts[1]);
 
             const Vec4 planes[5]{
-                Vec4(0.0f, 0.0f, -1.0f, 0.5f),//near
-                Vec4(1.0f, 0.0f, 0.0f, 0.5f),//left
-                Vec4(-1.0f, 0.0f, 0.0f, 0.5f),//rigth
-                Vec4(0.0f, 1.0f, 0.0f, 0.5f),//bottom
-                Vec4(0.0f, -1.0f, 0.0f, 0.5f),//top
+                Vec4(0.0f,  0.0f, -1.0f, -1.0f),//near
+                Vec4(1.0f,  0.0f,  0.0f, -1.0f),//left
+                Vec4(-1.0f, 0.0f,  0.0f, -1.0f),//rigth
+                Vec4(0.0f,  1.0f,  0.0f, -1.0f),//bottom
+                Vec4(0.0f, -1.0f,  0.0f, -1.0f),//top
             };
 
 
@@ -80,11 +81,11 @@ namespace cpuRenderSimple {
             }
 
             //if (to_check.size() > 1) {
-                for (auto& t : to_check) {
+                /*for (auto& t : to_check) {
                     t[0].SetColor(Vec4(1.0f, 0.0f, 0.0f, 1.0f), vertexBuffer->GetMaterial().GetAttrList());
                     t[1].SetColor(Vec4(1.0f, 0.0f, 0.0f, 1.0f), vertexBuffer->GetMaterial().GetAttrList());
                     t[2].SetColor(Vec4(1.0f, 0.0f, 0.0f, 1.0f), vertexBuffer->GetMaterial().GetAttrList());
-                }
+                }*/
             //}
 
             DEBUGPRINT("\t porcess: new trigs %zu\n", to_check.size());
