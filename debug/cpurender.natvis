@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <!-- Dynamic Column Vector -->
+  <Type Name="cpuRenderBase::VertexData">
+      <DisplayString Condition="attributes == 0">empty</DisplayString>
+      <DisplayString Condition="attributes != 0">vertex attributes</DisplayString>
+
+      <Expand>
+        <Item Name="POS" Condition="attr_enabled[0]==true">cpuRenderBase::VertexData::GetPos()</Item>
+        <Item Name="NORMAL" Condition="attr_enabled[1]==true">cpuRenderBase::VertexData::GetNormal()</Item>
+        <Item Name="TANGENT" Condition="attr_enabled[2]==true">cpuRenderBase::VertexData::GetTangent(attr_enabled)</Item>
+        <Item Name="TEXCOORD" Condition="attr_enabled[3]==true">cpuRenderBase::VertexData::GetTexcoord(attr_enabled)</Item>
+        <Item Name="COLOR" Condition="attr_enabled[4]==true">cpuRenderBase::VertexData::GetColor(attr_enabled)</Item>
+        <ArrayItems>
+          <Size>5</Size>
+          <ValuePointer>attr_enabled</ValuePointer>
+        </ArrayItems>
+      </Expand>
+  </Type>
+  
+
+</AutoVisualizer>
