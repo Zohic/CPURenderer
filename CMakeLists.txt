@@ -29,6 +29,8 @@ else()
 	endif()
 endif()
 
+set(CMAKE_BUILD_TYPE Debug)
+
 set(MAIN_DIR ${CMAKE_SOURCE_DIR})
 
 file(GLOB CPURENDER_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp include/*.h)
@@ -43,5 +45,5 @@ add_subdirectory("./test/")
 
 add_subdirectory("./backend_binds/")
 
-add_subdirectory("./app/")
+#add_subdirectory("./app/")
 add_subdirectory("./demos/")
