@@ -2,6 +2,7 @@
 #include "Render.h"
 #include "ResourceStorage.h"
 #include "VertexBuffer.h"
+#include <TriangleWrap.h>
 
 namespace cpuRenderSimple {
     using namespace cpuRenderBase;

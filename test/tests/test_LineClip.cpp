@@ -4,6 +4,7 @@
 
 #include <VertexData.h>
 #include <Render.h>
+#include <PlaneProcessing.h>
 
 using namespace cpuRenderBase;
 
