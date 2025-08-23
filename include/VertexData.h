@@ -5,6 +5,10 @@
 namespace cpuRenderBase {
 	class VertexData {
 			float* attributes;
+#ifdef _DEBUG
+			mutable bool attr_enabled[5];
+			void compareAttributes(const bool* attrMask) const;
+#endif
 			inline static size_t GetAttrFloatSize(const bool* attrMask);
 
 			VertexData(const VertexData& other) = delete;
