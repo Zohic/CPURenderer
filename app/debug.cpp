@@ -134,7 +134,7 @@ Vec4 GrayShade(const VertexData& prevd, const VertexData& postvd, const RenderIn
 
 */
 
-extern HANDLE hConsole;
+//extern HANDLE hConsole;
 
 
 
@@ -157,7 +157,7 @@ private:
 public:
 	OLCDrawing(olc::PixelGameEngine* ieng) : eng(ieng) {
 		if (ieng == nullptr)
-			throw std::exception("trying to make OLC drawing with nullptr");
+			throw std::logic_error("trying to make OLC drawing with nullptr");
 	}
 	
 	void DrawPixel(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) const override {
@@ -374,9 +374,9 @@ public:
 };
 
 
-#ifndef WIN32
-	static_assert(false)
-#endif
+//#ifndef WIN32
+//	static_assert(false)
+//#endif
 
 
 

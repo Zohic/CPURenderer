@@ -168,7 +168,7 @@ namespace cpuRenderSimple {
         mutable std::vector<float> color_;
         mutable std::vector<uint32_t> indices_;
 
-        mutable uint8_t attrMask_ = 0ui64;
+        mutable uint8_t attrMask_ = 0ULL;
 
         mutable cgltf_data* meshData_ = nullptr;
 

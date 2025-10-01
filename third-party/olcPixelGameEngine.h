@@ -144,7 +144,7 @@
 
 	Author
 	~~~~~~
-	David Barr, aka javidx9, ©OneLoneCoder 2018, 2019
+	David Barr, aka javidx9, ï¿½OneLoneCoder 2018, 2019
 */
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -225,6 +225,7 @@
 	#include <png.h>
 	typedef int(glSwapInterval_t) (Display *dpy, GLXDrawable drawable, int interval);
 	static glSwapInterval_t *glSwapIntervalEXT;
+	#undef Success
 #endif
 
 

@@ -18,14 +18,17 @@ RenderInstance* plane;
 float elapsedTime = 0.0f;
 
 void start(RenderBackend* back) {
-	plane = &back->MakePlane(Vec3(0.0f, 0.0f, 17.0f), Vec2(2.0f, 2.0f));
+	plane = &back->MakePlane(Vec3(0.0f, 0.0f, 1.5f), Vec2(20.0f, 20.0f));
 }
 
 void update(RenderBackend* back) {
 	elapsedTime += back->DeltaTime();
+	plane->transform.rot.x() += 1.2 * back->DeltaTime();
 	plane->transform.rot.y() += 1.2 * back->DeltaTime();
-	
-	plane->transform.pos.y() = 6.3f * sinf(elapsedTime * 10.0f);
+	plane->transform.rot.z() += 1.2 * back->DeltaTime();
+	plane->transform.scale.x() = 2.3f * sinf(elapsedTime * 2.3f); 
+	plane->transform.pos.y() = 2.3f * sinf(elapsedTime * 2.3f);
+	plane->transform.pos.z() = 4.0f + 2.3f * sinf(elapsedTime * 2.3f);
 
 	/*cpuRenderBase::utils::FillRotationMatrix(Vec3(0, 0, angle), rot);
 

@@ -59,9 +59,8 @@ namespace
          CurrentTest::Details() = oldDetails;
          return result;
       }
-
-      TestRunner runner;
       RecordingReporter reporter;
+      TestRunner runner;
    };
 
    struct TestRunnerFixture : public FixtureBase

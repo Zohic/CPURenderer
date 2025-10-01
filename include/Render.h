@@ -3,9 +3,11 @@
 #include "Camera.h"
 #include "RenderInstance.h"
 #include "TriangleWrap.h"
-#include <Windows.h>
 
+#ifdef WIN32
+#include <Windows.h>
 static HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+#endif
 
 #define V4asV3(v4) (*(reinterpret_cast<Vec3*>(&v4)))
 #define V4asV3_Const(cv4) (*(reinterpret_cast<const Vec3*>(&cv4)))
@@ -317,6 +319,7 @@ namespace cpuRenderBase {
 
 				return 2;
 			}
+			return -1;
 		}
 	}
 }

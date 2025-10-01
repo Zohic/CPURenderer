@@ -200,7 +200,7 @@ namespace {
    {
       MemoryOutStream stream;
 #ifdef UNITTEST_COMPILER_IS_MSVC6
-      stream << (unsigned __int64)85899ui64;
+      stream << (unsigned __int64)85899ULL;
 #else
       stream << (unsigned long long)85899ull;
 #endif
@@ -220,7 +220,7 @@ namespace {
    {
       MemoryOutStream stream;
 #ifdef UNITTEST_COMPILER_IS_MSVC6
-      stream << (unsigned __int64)0ui64;
+      stream << (unsigned __int64)0ULL;
 #else
       stream << (unsigned long long)0ull;
 #endif
